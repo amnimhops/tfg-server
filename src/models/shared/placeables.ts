@@ -1,40 +1,50 @@
 import { Asset } from "./assets";
 import { Info } from "./shared";
 
+export enum PlaceableType {
+    Obstacle,
+    Structure
+};
 
-export class Placeable extends Info{
-    constructor(id:string,name:string,description:string,icon:Asset,image:Asset,private texture:Asset){
-        super(id,name,description,icon,image);
+export class Placeable extends Info {
+    constructor(
+        id: string,
+        name: string,
+        description: string,
+        icon: Asset,
+        image: Asset,
+        private _texture: Asset,
+        private _type:PlaceableType
+    ) {
+        super(id, name, description, icon, image);
     }
-    getTexture():Asset{
-        return this.texture;
+    get texture():Asset { return this._texture; }
+    get type():PlaceableType { return this._type; }
+}
+
+export class Obstacle extends Placeable {
+    static readonly OBSTACLE:string = 'Obstacle';
+    constructor(
+        id: string,
+        name: string,
+        description: string,
+        icon: Asset,
+        image: Asset,
+        texture: Asset
+    ) {
+        super(id, name, description, icon, image, texture,PlaceableType.Obstacle);
     }
 }
 
-export class Obstacle extends Placeable{
-    constructor(id:string,name:string,description:string,icon:Asset,image:Asset,texture:Asset){
-        super(id,name,description,icon,image,texture);
+export class Structure extends Placeable {
+    constructor(
+        id: string,
+        name: string,
+        description: string,
+        icon: Asset,
+        image: Asset,
+        texture: Asset
+    ) {
+        super(id, name, description, icon, image, texture,PlaceableType.Structure);
     }
-    getPath(){
-        return `/world/placeables/obstacles/${this.getId()}`;
-    }
-}
-
-export class Structure extends Placeable{
-    constructor(id:string,name:string,description:string,icon:Asset,image:Asset,texture:Asset){
-        super(id,name,description,icon,image,texture);
-    }
-    getPath(){
-        return `/world/placeables/structures/${this.getId()}`;
-    }
-}
-
-export class PlaceableInstance{
-    constructor(private id:string,private placeable:Placeable){
-        
-    }
-}
-
-export function createPlaceable(data:any){
-
 }

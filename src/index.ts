@@ -1,48 +1,22 @@
+import { mockGameInstance } from "./persistence/mockData"
+import { Connection } from "./persistence/repository";
+import { InstanceService } from "./services/instanceService";
 
-import { PersistableWorld, WorldDescriptor } from './models/shared/world';
-import {DatabaseConnection} from './repositories';
-const connection = new DatabaseConnection();
+const gameInstance = mockGameInstance;
 
-(async()=>{
+(async()=> {
     try{
-        await connection.connect({
-            host:'localhost',
-            database:'unnamed_project'
-        });
+        const connection = new Connection();
+        const fu = await connection.connect({database:'unnamed_project',host:'localhost'});
+        const service = new InstanceService(connection);
+        const id = await service.save(gameInstance);
+        console.log('Instance saved as',id);
+        const newInstance = await service.load(id);
+        console.log(newInstance);
 
-        const repo = connection.createRepository<PersistableWorld>("configurations",);
-        const world1:PersistableWorld = {
-            name:'Persistent world #1',
-            cells:[
-                {
-                    id:'cell1',
-                    description:'cell 1',
-                    name:'Pantano',
-                    texture:{id:'asset0',type:'image',url:'fu/bar/iconefd'},
-                    icon:{id:'asset1',type:'image',url:'fu/bar/icon'},
-                    image:{id:'asset2',type:'image',url:'fu/bar/image'},
-                    allowedPlaceables:['plac1']
-                }
-            ],
-            placeables:[
-                {
-                    id:'plac1',
-                    description:'first placeable',
-                    name:'Energyplant',
-                    type:'structure',
-                    texture:{id:'asset0',type:'image',url:'fu/bar/iconefd'},
-                    icon:{id:'asset3',type:'image',url:'fu/bar/icon2'},
-                    image:{id:'asset4',type:'image',url:'fu/bar/image2'},
-
-                }
-            ]
-        }
-
-        const result = await repo.save(world1);
-        const loaded = await repo.load(result.id);
-        
-        console.log(new WorldDescriptor(loaded));
-    }catch(error:any){
-        console.error(error);
+    }catch(error:unknown){
+        console.log(error);
     }
+    
+    
 })();

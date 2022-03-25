@@ -1,19 +1,24 @@
+export interface AssetParams{
+    id:string,
+    type:string,
+    url:string,
+    data?:any;
+}
 export class Asset{
-    constructor(private id:string,private type:string,private url:string, private data?:any){}
-    static createAsset(data:any):Asset{
-        return new Asset(data.id,data.type,data.url,data.data);
-    }
-    public getId():string{
-        return this.id
+    private _id:string;
+    private _type:string;
+    private _url:string;
+    private _data:string;
+
+    constructor(params:AssetParams){
+        this._id = params.id;
+        this._type = params.type;
+        this._url = params.url;
+        this._data = params.data;
     }
 
-    public getType():string{
-        return this.type;
-    }
-    public getUrl():string{
-        return this.url;
-    }
-    public getData():any{
-        return this.data;
-    }
+    get id():string { return this._id; }
+    get type():string { return this._type; }
+    get url():string { return this._url; }
+    get data():string { return this._data; }
 }

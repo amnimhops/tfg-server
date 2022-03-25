@@ -1,27 +1,18 @@
 import { Asset } from "./assets";
 
 export class Info {
-    constructor(private id: string, private name: string, private description: string, private icon: Asset, private image: Asset) { }
+    constructor(
+        private _id: string, 
+        private _name: string, 
+        private _description: string, 
+        private _icon: Asset, 
+        private _image: Asset) { }
 
-    getId(): string {
-        return this.id;
-    }
-    getName(): string {
-        return this.name;
-    }
-    getDescription(): string {
-        return this.description;
-    }
-    getIcon(): Asset {
-        return this.icon;
-    }
-    getImage(): Asset {
-        return this.image;
-    }
-
-    getPath() {
-        throw new Error('getPath() must be overriden');
-    }
+    get id():string { return this._id;}
+    get name():string { return this._name;}
+    get description():string { return this._description;}
+    get icon():Asset { return this._icon;}
+    get image():Asset { return this._image;}  
 }
 
 export class Vector{
