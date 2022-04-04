@@ -1,18 +1,11 @@
 import { Asset } from "./assets";
 
-export class Info {
-    constructor(
-        private _id: string, 
-        private _name: string, 
-        private _description: string, 
-        private _icon: Asset, 
-        private _image: Asset) { }
-
-    get id():string { return this._id;}
-    get name():string { return this._name;}
-    get description():string { return this._description;}
-    get icon():Asset { return this._icon;}
-    get image():Asset { return this._image;}  
+export interface Media {
+    name: string;
+    description: string;
+    icon: Asset;
+    image: Asset;
+    thumbnail: Asset;
 }
 
 export class Vector{

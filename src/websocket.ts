@@ -1,0 +1,7 @@
+function startNotifications(){
+    
+}
+
+function endNotifications(){
+
+}

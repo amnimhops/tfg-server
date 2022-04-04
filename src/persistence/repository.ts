@@ -1,20 +1,5 @@
 import { Db, Collection, MongoClient, ObjectId } from 'mongodb';
 
-
-export interface SearchResult<T>{
-    count:number;
-    page:number;
-    pages:number;
-    results:T[];
-}
-type Pagination = {
-    page:number;
-    itemsPerPage:number;
-}
-type Sorting = {
-    field:string;
-    dir:'asc'|'desc';
-}
 export type Unique = {
     id?:string;
 }
@@ -37,11 +22,9 @@ export class Repository<T extends Unique>{
 
     async load(id: string): Promise<T> {
         try{
-            const result = await this.collection.findOne({
-                "_id": new ObjectId(id)
-            });
-            console.log(result);
-            return { id: result._id.toHexString(), ...result } as any;
+            const result = await this.collection.findOne({"id": id}); // No confundir con _id
+            delete result['_id']; // Ocultamos el identificador interno de mongo, así los updates no generarán inconsistencias
+            return result as any;
         }catch(error){
             console.error('Error loading object',id,'from collection',this.collection.collectionName);
         }
@@ -49,19 +32,28 @@ export class Repository<T extends Unique>{
     }
 
     async save(object: T): Promise<string> {
+        /**
+         * Aunque _id es importante para replicación, no lo usaremos
+         * como identificador de los documentos. Esto se debe a que
+         * _id es un objeto, y el modelo de datos necesita referenciarse
+         * usando strings. Así pues, se crea un nuevo campo 'id' con 
+         * el contenido string de un nuevo ObjectId(), que se usará
+         * como clave de búsqueda.
+         */
         try{
-            if (object.id) {
-                await this.collection.updateOne(
-                    { "_id": new ObjectId(object.id) },
-                    object,
-                    { upsert: false, writeConcern: { w: 1 } }
-                );
-    
-                return object.id;
-            } else {
-                const response = await this.collection.insertOne(object, { writeConcern: { w: 1 } });
-                return response.insertedId.toHexString();
+            // Esto evita que alguien intente sobreescribir el identificador interno de mongo
+            if(object['_id']) delete object['_id'];
+
+            if(!object.id){
+                object.id = new ObjectId().toHexString();
             }
+            await this.collection.replaceOne(
+                { "id": object.id}, // No confundir con _id
+                object,
+                { upsert: true, writeConcern: { w: 1 } }
+            );
+
+            return object.id;
         }catch(error){
             console.error('Error saving object',error);
             throw error;
@@ -69,25 +61,27 @@ export class Repository<T extends Unique>{
         
     }
 
-    find(query: any): Promise<T[]> {
-        throw new Error('Method not implemented.');
+    async find(query: any, projection?:{[name:string]:boolean}): Promise<T[]> {
+        const data = await this.collection.find(query,projection).toArray()
+        // Se eliminan los identificadores para impedir actualizaciones futuras
+        return data.map( element => {
+            delete element['_id'];
+            return element as any;
+        });
     }
 
-    search(query:any, pagination:Pagination):Promise<SearchResult<T>>{
-        return null;
+    async delete(id: string): Promise<void> {
+        const result = await this.collection.deleteOne({id});
+        console.log('Deleted',result.deletedCount,'documents from',this.collection.collectionName);
     }
-
-    delete(id: string): Promise<T> {
-        throw new Error('Method not implemented.');
-    }
-
-
 }
 
 export class Connection {
-    client: MongoClient;
-    db: Db;
-    async connect(settings: ConnectionConfig): Promise<any> {
+    private client: MongoClient;
+    private db: Db;
+    private collections:Record<string,Collection> = {};
+    
+    async connect(settings: ConnectionConfig): Promise<void> {
         this.client = new MongoClient(`mongodb://${settings.host}`, {
             auth: {
                 username: settings.user,
@@ -97,7 +91,6 @@ export class Connection {
 
         return this.client.connect().then(() => {
             this.db = this.client.db(settings.database);
-            return true;
         }).catch(err => {
             console.error('Connection error',err);
             throw err;
@@ -105,8 +98,22 @@ export class Connection {
     }
 
     createRepository<T extends Unique>(table: string): Repository<T> {
-        const collection = this.db.collection(table);
-        return new Repository<T>(collection);
+        /**
+         * Nota interesante: el driver crea 
+         */
+        if(this.collections[table] == undefined){
+            this.collections[table] = this.db.collection(table);
+        }
+
+        return new Repository<T>(this.collections[table]);
     }
 
+}
+
+
+export enum Collections {
+    Worlds = "worldDescriptors",
+    GameInstances = "gameInstances",
+    Players = "players",
+    Users = "users"
 }

@@ -1,23 +1,32 @@
-import { randomItem, range, toMap, randomInt } from "../helpers/functions";
-import { Asset } from "../models/shared/assets";
-import { Cell, CellInstance } from "../models/shared/cells";
-import { GameInstance, InstancePlayer } from "../models/shared/instances";
-import { Placeable, Structure } from "../models/shared/placeables";
-import { Player } from "../models/shared/players";
-import { Resource, Stockpile } from "../models/shared/resources";
-import { Vector } from "../models/shared/shared";
-import { WorldDescriptor } from "../models/shared/world";
+import { randomInt, randomItem, range, toMap } from "../helpers/functions";
+import { Asset, Cell, CellInstance, FlowPeriodicity, Game, GameInstance, InstancePlayer, Media, Placeable, Player, Resource, ResourceFlow, Vector } from "../models/monolyth";
+import { WorldDescriptor } from "../models/shared/_old/world";
 
-function randomAsset() {
-    return new Asset({
+const NUM_PLAYERS = 50;
+const NUM_RESOURCES = 20;
+const NUM_PLACEABLES = 50;
+const NUM_CELLS = 30;
+const MAP_SIZE = 500; // 100 x 100
+
+function randomMedia(prefix:string='media-'):Media{
+    return {
+        description:randomText(),
+        icon:randomAsset(),
+        image:randomAsset(),
+        name:randomName(prefix),
+        thumbnail:randomAsset()
+    }
+}
+function randomAsset():Asset {
+    return {
         id:(Math.random() * 65535)+'',
         type:'image',
         url:randomName('url-'),
         data:null
-    });
+    };
 }
 
-function randomText(words:number = 10){
+export function randomText(words:number = 10){
     const lipsum = [
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin congue, nibh vitae lobortis cursus, sapien risus sollicitudin justo, et venenatis diam odio eu turpis. Proin convallis leo ante, a ultrices tortor interdum at. Donec purus lorem, lobortis vel pellentesque id, eleifend id purus. Cras tristique erat sit amet nisl cursus, a pulvinar dui fringilla. Nunc ultricies, leo quis feugiat accumsan, arcu dolor commodo velit, non finibus dolor sapien et lacus. Cras sed erat magna. Proin tellus sapien, eleifend quis euismod eu, vulputate in nunc. Praesent ut lacus ut augue maximus ornare.",
         "Duis nisi felis, fringilla a iaculis a, suscipit quis nulla. Mauris ac diam velit. Suspendisse finibus justo ut sagittis maximus. Nunc luctus placerat nisl maximus placerat. Sed non mi sed lectus faucibus efficitur. Duis vitae lorem pellentesque, lobortis lorem id, imperdiet nulla. Duis id ullamcorper turpis. Donec vel quam nisi. Aliquam erat volutpat. Aliquam sed pellentesque mauris. Donec eros diam, commodo ac enim ut, dictum auctor lectus.",
@@ -34,7 +43,7 @@ function randomText(words:number = 10){
     return text.join(' ');
 }
 
-function randomName(prefix:string = "name-"){
+export function randomName(prefix:string = "name-"){
     const dict:string[] = "abcdefghijklmnñopqrstuvwxyz ".split('');
     const rnd = Math.random() * 10;
     const name:string[] = [];
@@ -44,66 +53,95 @@ function randomName(prefix:string = "name-"){
     return prefix+name.join('');
 }
 
-const players:Player[] = range(50).map( i => new Player(`player-${i}`,randomName('player-'),randomName()+'@here.com',randomName()));
+function randomFlow():ResourceFlow{
+    return {
+        resourceId:randomItem(resources).id,
+        amount:randomInt(1000),
+        periodicity:randomItem(periods)
+    };
+}
 
-const resources:Resource[] = range(10).map( 
-    i => new Resource(`resource-${i}`,randomName('resource'),randomText(),randomAsset(),randomAsset())
+const periods:FlowPeriodicity[] = [
+    FlowPeriodicity.Once,
+    FlowPeriodicity.PerSecond,
+    FlowPeriodicity.PerMinute,
+    FlowPeriodicity.PerHour,
+    FlowPeriodicity.PerDay,
+    FlowPeriodicity.PerWeek
+];
+const players:Player[] = range(NUM_PLAYERS).map( i => ({
+    id:`player-${i}`,
+    name:randomName('player Name-'),
+    surname:randomName('Surname-'),
+    email:randomName()+'@here.com',
+    birthDate:new Date(),
+    password:'fus'
+}));
+
+const resources:Resource[] = range(NUM_RESOURCES).map( 
+    i => ({id:`resource-${i}`,media:randomMedia('resource-')})
 );
 
-const placeables:Placeable[] = range(50).map(
-    i => new Structure(
-        `placeable-${i}`,
-        randomName('placeable'),
-        randomText(),
-        randomAsset(),
-        randomAsset(),
-        randomAsset()
-    )
+const placeables:Placeable[] = range(NUM_PLACEABLES).map(
+    i => ({
+        id:`placeable-${i}`,
+        media:randomMedia('placeable-'),
+        texture:randomAsset(),
+        flows:range(randomInt(5)).map( i => randomFlow())
+    })
 );
-const cells:Cell[] = range(25).map(
-    i => new Cell(
-        `cell-${i}`,
-        randomName('cell'),
-        randomText(),
-        randomAsset(),
-        randomAsset(),
-        randomAsset(),
-        range(5).map( j=>randomItem(placeables)) // 5 aleatorios
-    )
+const cells:Cell[] = range(NUM_CELLS).map(
+    i => ({
+        id:`cell-${i}`,
+        media:randomMedia('cell-'),
+        texture:randomAsset(),
+        allowedPlaceableIds:range(5).map( j=>randomItem(placeables).id) // 5 aleatorios
+    })
 );
 
-const instancePlayers:InstancePlayer[] = players.map( player => new InstancePlayer(
-    player,
-    toMap(
-        resources.map( res => new Stockpile(res,randomInt(100))),
-        record => record.resource.id
-    )
-));
+const instancePlayers:InstancePlayer[] = players.map( player => ({
+    playerId:player.id,
+    stockpiles:resources.map( res => ({resourceId:res.id,amount:randomInt(100)}))
+}));
 
-const map:CellInstance[] = range(100).map( i => {
+const map:CellInstance[] = range(MAP_SIZE * MAP_SIZE).map( i => {
     const cell = randomItem(cells);
-    const cellInstance = new CellInstance(
-        `cellinstance-${i}`,
-        cell,
-        new Vector(randomInt(200),randomInt(200)),
-        range(2).map( j=>randomItem(cell.placeables)
-        )
-    )
-    // asignar a alguien random
-    randomItem(instancePlayers).addCell(cellInstance);
+    const cellInstance:CellInstance = {
+        cellId:cell.id,
+        playerId:randomItem(instancePlayers).playerId,
+        position:new Vector(randomInt(200),randomInt(200)),
+        placeableIds:range(2).map( j=>randomItem(cell.allowedPlaceableIds))
+    }
     return cellInstance;
 });
 
-const world:WorldDescriptor = new WorldDescriptor(
-    randomName('world-'),
-    toMap(resources, record => record.id),
-    toMap(placeables, record => record.id),
-    toMap(cells, record => record.id)
-);
+const world:Game= {
+    cells:cells,
+    media:{
+        description:randomName(),
+        icon:randomAsset(),
+        image:randomAsset(),
+        name:randomName(),
+        thumbnail:randomAsset()
+    },
+    ownerId:null,
+    placeables:placeables,
+    resources:resources,
+    technologies:[],
+    id:'gid-1'
+}
 
-export const mockGameInstance:GameInstance = new GameInstance(
-    null,
-    world,
-    toMap(map, record => record.id),
-    toMap(instancePlayers, record => record.player.id)
-);
+export const mockGameInstance:GameInstance = {
+    cells:range(MAP_SIZE * MAP_SIZE).map( i => {
+        const cell = randomItem(cells);
+        const placeableIds = range([0,cell.allowedPlaceableIds.length]).map( i => cell.allowedPlaceableIds[i]);
+        return {
+            cellId:cell.id,
+            playerId:randomItem(players).id,
+            placeableIds,
+            position:new Vector(i/10,i%10)
+        }
+    }),
+    gameId:world.id,
+    players:instancePlayers
+}

@@ -1,22 +1,21 @@
 import { Asset } from "./assets";
-import { Info, Vector } from "./shared";
+import { Media, Vector } from "./shared";
 import { Placeable } from "./placeables";
 import { InstancePlayer } from "./instances";
 
-export class Cell extends Info{
+export class Cell{
     constructor(
-        id:string,
-        name:string,
-        description:string,
-        icon:Asset,
-        image:Asset,
+        private _id:string,
+        private _media:Media,
         private _texture:Asset,
         private _placeables:Placeable[]){
-        super(id,name,description,icon,image);
+        
     }
-    
+    get id():string { return this._id; }
+    get media():Media { return this._media};
     get texture():Asset { return this._texture; }
     get placeables():Placeable[] { return this._placeables};
+    
 }
 
 export class CellInstance{

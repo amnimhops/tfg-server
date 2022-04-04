@@ -1,12 +1,27 @@
 import * as express from 'express';
+import { Server } from 'http';
+import { Connection } from './persistence/repository';
+import { GameAPI } from './services/api';
+
+
 const app = express();
 const port = process.env.PORT || 3000;
 
-//var routes = require('./api/routes/todoListRoutes'); //importing route
-//routes(app); //register the route
-app.use(express.json());
-app.listen(port);
+let server:Server = null;
 
-const router = express.Router();
+export function startExpress(apiRouter:express.Router){
+    app.use(express.json());
+    app.use('/',apiRouter);
+    server = app.listen(port);    
 
-app.use(router);
+    console.info('Servicio web iniciado');
+}
+
+export async function stopExpress(){
+    return new Promise( (resolve: (value:any)=>void, reject:(reason?:any)=>void) => {
+        server.close( (err) => {
+            if(err) reject(err);
+            else(resolve('Servicio web finalizado'));
+        });
+    });
+}
