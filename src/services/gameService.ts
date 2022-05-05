@@ -1,30 +1,24 @@
-import { Game } from '../models/monolyth';
-import { Collections, Connection, Repository } from '../persistence/repository';
 
-export class GameService{
-    private gameStore:Repository<Game>;
+import { Collections, Connection, Repository } from "../persistence/repository";
+import { ServiceError, ServiceErrorCode } from "../models/errors";
+import { BasicRESTService } from "./restService";
+import { Game, User } from '../models/monolyth';
 
-    constructor(private connection:Connection){
-        this.gameStore = connection.createRepository<Game>(Collections.Worlds);
+export class GameService extends BasicRESTService<Game>{
+    constructor(connection:Connection){
+        super(connection,Collections.Games)
+        console.info('Servicio de juegos iniciado')
     }
 
-    async getAvailableGames():Promise<Partial<Game>[]>{
-        const found = await this.gameStore.find({},{fu:false});
-        const descriptors:Partial<Game>[] = [];
-
-        for(const descriptor of found){
-            descriptors.push({
-                id:descriptor.id,
-                media:descriptor.media
-            });
-        }
-        
-        return descriptors;
-    }
-
-    async saveGame(game:Game):Promise<string>{
-        const id = await this.gameStore.save(game);
-        game.id = id;
-        return id;
+    /**
+     * Devuelve una lista con la información parcial de los juegos disponibles
+     * @returns Lista de juegos disponibles
+     */
+    async getGameList():Promise<Partial<Game>[]>{
+        const games = await this.find({});
+        return games.map( game => ({
+            id:game.id,
+            media:game.media
+        }));
     }
 }

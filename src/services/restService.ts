@@ -1,5 +1,5 @@
-import { Connection, Repository, Unique } from "../../persistence/repository";
-import { ServiceError, ServiceErrorCode } from "./dataTypes";
+import { Connection, Repository, Unique } from "../persistence/repository";
+import { ServiceError, ServiceErrorCode } from "../models/errors";
 
 
 export class BasicRESTService<Type extends Unique>{
@@ -26,7 +26,7 @@ export class BasicRESTService<Type extends Unique>{
     async create(entity: Type): Promise<string> {
         const exists = await this._repository.load(entity.id);
         if(exists) throw <ServiceError> {
-            code:ServiceErrorCode.Duplicated,
+            code:ServiceErrorCode.Conflict,
             message:`Ya existe una entidad con el identificador ${entity.id}`
         }
 

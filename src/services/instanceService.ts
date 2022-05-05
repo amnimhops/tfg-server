@@ -1,17 +1,17 @@
-import { Connection, Repository } from "../persistence/repository";
-import { Collections, DBGameInstance, DBPlayer, DBWorldDescriptor } from "../models/shared/_old/schema";
-import { GameInstance } from "../models/monolyth";
+import { Collections, Connection, Repository } from "../persistence/repository";
+import { Game, GameInstance, Player } from "../models/monolyth";
+import { addInstance } from "../live/instances";
 
 
-export class InstanceService {
+export class InstanceService{
     private instanceStore:Repository<GameInstance>;
-    private gameStore:Repository<DBWorldDescriptor>;
-    private playerStore:Repository<DBPlayer>;
+    private gameStore:Repository<Game>;
+    private playerStore:Repository<Player>;
 
     constructor(connection:Connection){
-        this.gameStore = connection.createRepository<DBWorldDescriptor>(Collections.Worlds);
+        this.gameStore = connection.createRepository<Game>(Collections.Games);
         this.instanceStore = connection.createRepository<GameInstance>(Collections.GameInstances);
-        this.playerStore = connection.createRepository<DBPlayer>(Collections.Players);
+        this.playerStore = connection.createRepository<Player>(Collections.Players);
 
         console.info('Servicio de instancias iniciado')
     }
@@ -25,11 +25,16 @@ export class InstanceService {
         return instance.id;
     }
 
-    async load(id: string): Promise<GameInstance>{
-        const instance = await this.instanceStore.load(id);
-        const world = await this.gameStore.load(instance.gameId);
-        const players = await this.playerStore.find(instance.players);
+    async startInstances():Promise<void>{
+        const instances = await this.instanceStore.find({});
+        const games = await this.gameStore.find({});
+        let count = 0;
+        instances.forEach( instance => {
+            const game = games.find( g => g.id == instance.gameId);
+            addInstance(instance,game);
+            count++;
+        })
 
-        return instance;
+        console.log(count,'instancias preparadas');
     }
 }

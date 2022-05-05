@@ -1,14 +1,20 @@
 
-import { User } from "../../models/monolyth";
-import { Connection, Repository } from "../../persistence/repository";
-import { Collections } from "../../models/shared/_old/schema";
-import { ServiceError, ServiceErrorCode } from "./dataTypes";
+import { Collections, Connection, Repository } from "../persistence/repository";
+import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { BasicRESTService } from "./restService";
+import { User } from '../models/monolyth';
+import * as crypto from 'crypto';
+import { setSession } from "../live/sessions";
 
 export interface PasswordRecoveryRequest{
     id?:string; // Unique, actuará como token
     email:string;
     requestDate:Date;
+}
+
+export interface LoginRequest{
+    email:string;
+    password:string;
 }
 
 export class UserService extends BasicRESTService<User>{
@@ -19,12 +25,27 @@ export class UserService extends BasicRESTService<User>{
 
         console.info('Servicio de usuarios iniciado')
     }
+
+    async authenticate(request:LoginRequest):Promise<string>{
+        const users = await this.repository.find({...request});
+
+        if(users.length == 1){
+            const user = users[0];
+            const hash = crypto.createHash('md5').update(user.email+"-"+Date.now()).digest('hex');
+            
+            setSession(hash,user);
+
+            return hash;
+        }else{
+            throw <ServiceError>{code:ServiceErrorCode.Unauthorized,message:'Las credenciales no son válidas'};
+        }
+    }
    
     async checkEmailIsNotInUse(user:User):Promise<void>{
         const emailExists = await this.repository.find({email:user.email});
         
         if(emailExists.length > 0){
-            throw <ServiceError>{code:ServiceErrorCode.Duplicated,message:'Ya existe un usuario con este email'};
+            throw <ServiceError>{code:ServiceErrorCode.Conflict,message:'Ya existe un usuario con este email'};
         }
     }
 
@@ -36,7 +57,7 @@ export class UserService extends BasicRESTService<User>{
     async requestPasswordChange(email:string):Promise<PasswordRecoveryRequest>{
         const previousTokens = await this.passwordTokenRepo.find({email});
         if(previousTokens.length > 0) {
-            throw <ServiceError>{code:ServiceErrorCode.Duplicated,message:'Ya existe una solicitud para este email'};
+            throw <ServiceError>{code:ServiceErrorCode.Conflict,message:'Ya existe una solicitud para este email'};
         }
 
         const request:PasswordRecoveryRequest = {email,requestDate:new Date()};

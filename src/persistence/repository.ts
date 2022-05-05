@@ -112,7 +112,7 @@ export class Connection {
 
 
 export enum Collections {
-    Worlds = "worldDescriptors",
+    Games = "games",
     GameInstances = "gameInstances",
     Players = "players",
     Users = "users"

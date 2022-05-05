@@ -2,8 +2,12 @@
   "compilerOptions": {
     "target": "es5",
     "module": "commonjs",
+    // https://stackoverflow.com/questions/37606571/absolute-module-path-resolution-in-typescript-files-in-visual-studio-code
+    // VSC genera muchos problemas con las rutas absolutas/relativas
+    "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "out",
+    "baseUrl": ".",
     "paths": {
       "*": [
         "./node_modules/*",

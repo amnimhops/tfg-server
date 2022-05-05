@@ -1,14 +1,10 @@
-import { create } from "domain";
-import { Collection } from "mongodb";
+import * as mocked from "./models/mocks";
 import { startExpress } from "./express";
-import { mockGameInstance } from "./persistence/mockData"
-import { Connection } from "./persistence/repository";
-import { Collections, DBGameInstance, DBPlayer, DBWorldDescriptor } from "./models/shared/_old/schema";
-import { createAPI } from "./services/api";
-import { GameService } from "./services/gameService";
-import { InstanceService } from "./services/instanceService";
+import { Game, GameInstance, Player } from "./models/monolyth";
+import { Collections, Connection } from "./persistence/repository";
+import { createAPI } from "./api/api";
 
-const gameInstance = mockGameInstance;
+//const gameInstance = randomItem(gameInstances);
 
 /**
  * Borra todas las instancias, jugadores y juegos. A continuación, reinicia el universo.
@@ -16,31 +12,44 @@ const gameInstance = mockGameInstance;
  * @param connection 
  */
 async function bigBounce(connection:Connection){
-    const instanceRepo = connection.createRepository<DBGameInstance>(Collections.GameInstances);
-    const worldRepo = connection.createRepository<DBWorldDescriptor>(Collections.Worlds);
-    const playerRepo = connection.createRepository<DBPlayer>(Collections.Players);
+    const instanceRepo = connection.createRepository<GameInstance>(Collections.GameInstances);
+    const gameRepo = connection.createRepository<Game>(Collections.Games);
+    const playerRepo = connection.createRepository<Player>(Collections.Players);
 
     const instances = await instanceRepo.find({});
-    const worlds = await worldRepo.find({});
+    const games = await gameRepo.find({});
     const players = await playerRepo.find({});
 
     const tasks:Promise<any>[] = [];
     tasks.push(...instances.map( instance => instanceRepo.delete(instance.id)));
-    tasks.push(...worlds.map( world => worldRepo.delete(world.id)));
+    tasks.push(...games.map( world => gameRepo.delete(world.id)));
     tasks.push(...players.map( player => playerRepo.delete(player.id)));
 
     await Promise.all(tasks);
+    
+    
+    for(const instance of mocked.gameInstances){
+        const i = await instanceRepo.save(instance);        
+        console.log('Instancia guardada',i)
+    }
+    
+    for(const game of mocked.games){
+        const i = await gameRepo.save(game);
+        console.log('Saved game',i);
+    }
+    
 }
 
 const connection = new Connection();
 
 (async()=> {
     const fu = await connection.connect({database:'unnamed_project',host:'localhost'});
-    bigBounce(connection); //  Resetea el universo
+    await bigBounce(connection); //  Resetea el universo
     
     const gameAPI = createAPI(connection);
-    
     const server = startExpress(gameAPI.router);
+
+    await gameAPI.instanceService.startInstances();
 
     
 })().then( () => {
