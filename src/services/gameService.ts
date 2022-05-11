@@ -1,10 +1,14 @@
 
 import { Collections, Connection, Repository } from "../persistence/repository";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
-import { BasicRESTService } from "./restService";
+import { BasicRESTService, IRestService } from "./restService";
 import { Game, User } from '../models/monolyth';
 
-export class GameService extends BasicRESTService<Game>{
+export interface IGameService extends IRestService<Game>{
+    getGameList():Promise<Partial<Game>[]>;
+}
+
+export class GameService extends BasicRESTService<Game> implements IGameService {
     constructor(connection:Connection){
         super(connection,Collections.Games)
         console.info('Servicio de juegos iniciado')

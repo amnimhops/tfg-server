@@ -30,7 +30,27 @@ function withPlayer<T>(token:string,callback:(player:InstancePlayer,instance:Liv
     });
 }
 
-export class GameplayService{
+export interface IGameplayService{
+    joinGame(token:string,gameId:string):Promise<Asset[]>;
+    getGameData(token:string):Promise<Game>;
+    getCells(token:string):Promise<CellInstance[]>;
+    startActivity(token:string, type:ActivityType,target:ActivityTarget):Promise<EnqueuedActivity>
+    getQueue(token:string,type?:ActivityType):Promise<EnqueuedActivity[]>
+    cancelActivity(token: string, id:number):Promise<void>
+    changeActivityOrder(token:string, id:number,offset:number):Promise<void>
+    getWorldMap(token:string, query:WorldMapQuery):Promise<WorldMapSector>
+    getInstancePlayer(token:string, id?:string):Promise<Partial<InstancePlayer>>
+    getMessages(token:string, text:string, type: MessageType, page: number): Promise<SearchResult<Message>>
+    sendMessage(token:string, dstPlayerId:string,subject:string,message:string):Promise<string>
+    sendTradeAgreement(token:string, agreement:TradingAgreement):Promise<string>
+    cancelTradeAgreement(token:string, id:number):Promise<void>
+    acceptTradeAgreement(token:string,id:number):Promise<void>
+    getTradingAgreement(token:string,id:number):Promise<TradingAgreement>
+    deleteMessage(token:string, id:number):Promise<void>
+
+}
+
+export class GameplayService implements IGameplayService{
     constructor(private connection:Connection){
 
     }
@@ -74,23 +94,23 @@ export class GameplayService{
     startActivity(token:string, type:ActivityType,target:ActivityTarget):Promise<EnqueuedActivity>{
         return withPlayer<EnqueuedActivity>( token, (player,instance) => instance.startActivity(player,type,target));
     }
-
+    
     getQueue(token:string,type?:ActivityType):Promise<EnqueuedActivity[]>{
         return withPlayer<EnqueuedActivity[]>( token, (player,instance) => instance.getActivities(player,type) );
     }
-
+    
     cancelActivity(token: string, id:number):Promise<void>{
         return withPlayer<void>( token, (player,instance) => instance.cancelActivity(player,id) );
     }
-
+   
     changeActivityOrder(token:string, id:number,offset:number):Promise<void>{
         return withPlayer<void>( token, (player,instance) => instance.changeActivityOrder(player,id,offset) );
     }
-
+    
     getWorldMap(token:string, query:WorldMapQuery):Promise<WorldMapSector>{
         return withPlayer<WorldMapSector>( token, (player,instance) => instance.getWorldMap(query));
     }
-
+    
     getInstancePlayer(token:string, id?:string):Promise<Partial<InstancePlayer>>{
         return withPlayer<Partial<InstancePlayer>>( token, (player,instance) => {
             if(id){
@@ -101,19 +121,19 @@ export class GameplayService{
             }
         });
     }
-
+    
     getMessages(token:string, text:string, type: MessageType, page: number): Promise<SearchResult<Message>>{
         return withPlayer<SearchResult<Message>>( token, (player,instance) => 
             instance.getMessages(player,text,type,page)
         );
     }
-
+    
     sendMessage(token:string, dstPlayerId:string,subject:string,message:string):Promise<string> {
         // Express.js da problemas si se devuelve un número, al tomarlo como una sobrecaga de res.send()
         // con código de error, e interpreta el número como tal. Por eso hacemos el casting intermedio.l
         return withPlayer<string>( token, (player,instance) => instance.sendMessage(player,dstPlayerId,subject,message).toString())
     }
-
+    
     sendTradeAgreement(token:string, agreement:TradingAgreement):Promise<string>{
         return withPlayer<string>( token, (player,instance) => instance.sendTradeAgreement(agreement).toString() );
     };
@@ -126,8 +146,8 @@ export class GameplayService{
         return withPlayer<void>( token, (player,instance) => instance.acceptTradeAgreement(player,id) );
     }
     
-    tradeAgreementActive(token:string,id:number):Promise<boolean>{
-        return withPlayer<boolean>( token, (player,instance) => instance.tradeAgreementActive(player,id) );
+    getTradingAgreement(token:string,id:number):Promise<TradingAgreement>{
+        return withPlayer<TradingAgreement>( token, (player,instance) => instance.getTradingAgreement(player,id) );
     }
     
     deleteMessage(token:string, id:number):Promise<void>{

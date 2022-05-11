@@ -139,7 +139,7 @@ function createActivity(type: ActivityType, name: string): Activity {
         media: randomMedia(),
         type,
         /*requiredTech:randomItem(technologies).id,*/
-        duration: 60000+randomInt(+100000), // milisegundos
+        duration: 10000+randomInt(+10000), // milisegundos
         expenses: range(randomInt(5)).map(i => {
             const res = randomItem(resources);
             return { amount: randomInt(100), resourceId: res.id }
@@ -208,9 +208,9 @@ const map:CellInstance[] = range(MAP_SIZE * MAP_SIZE).map( i => {
 export const games: Game[] = range(10).map(i => ({
     cells: cells,
     media: {
-        description: randomName(),
+        description: randomText(100),
         icon: randomAsset(''),
-        image: randomAsset(''),
+        image: randomAsset('gameportrait'),
         name: randomName(),
         thumbnail: randomAsset('')
     },

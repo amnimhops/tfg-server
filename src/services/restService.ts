@@ -1,8 +1,15 @@
 import { Connection, Repository, Unique } from "../persistence/repository";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
 
+export interface IRestService<Type extends Unique>{
+    load(id: string):Promise<Type>;
+    find(data: Record<string, any>): Promise<Type[]>;
+    create(entity: Type): Promise<string>;
+    update(entity: Type): Promise<void>;
+    delete(id: string): Promise<void>;
+}
 
-export class BasicRESTService<Type extends Unique>{
+export class BasicRESTService<Type extends Unique> implements IRestService<Type>{
     private _repository:Repository<Type>;
     constructor(connection:Connection, collection:string){
         this._repository = connection.createRepository<Type>(collection);

@@ -1077,11 +1077,11 @@ export class LiveGameInstance{
          * los recursos invertidos.
          */            
         if(!agreement){
-            throw new Error('No se ha encontrado el tratado comercial');
+            throw <ServiceError>{code:ServiceErrorCode.NotFound,message:'No se ha encontrado el tratado comercial'};
         }else if(!srcPlayer || !dstPlayer){
-            throw new Error('No se ha encontrado a uno o varios de los participantes del acuerdo');
+            throw <ServiceError>{code:ServiceErrorCode.Conflict,message:'No se ha encontrado el jugador'};
         }else if(players.indexOf(initiator.playerId) == -1){
-            throw new Error('El jugador no puede cancelar un pacto en el que no está involucrado');
+            throw <ServiceError>{code:ServiceErrorCode.Forbidden,message:'El jugador no puede cancelar un pacto en el que no está involucrado'};
         }else{
             // Se devuelven los recursos al jugador que inició el tratado
             this.addResources(srcPlayer,agreement.offer);
@@ -1152,16 +1152,16 @@ export class LiveGameInstance{
         }
     }
 
-    tradeAgreementActive(player:InstancePlayer,id:number):boolean{
+    getTradingAgreement(player:InstancePlayer,id:number):TradingAgreement{
         const agreement = this.instance.pendingTradingAgreements.find( agreement => agreement.id == id );
         if(agreement){
             if(agreement.srcPlayerId == player.playerId || agreement.dstPlayerId == player.playerId){
-                return true;
+                return agreement;
             }else{
-                throw <ServiceError> { code:ServiceErrorCode.Unauthorized, message:'El jugador debe estar involucrado para poder consultar un trato comercial.'}
+                throw <ServiceError> { code:ServiceErrorCode.Forbidden, message:'El jugador debe estar involucrado para poder consultar un trato comercial.'}
             }
         }else{
-            return false;
+            throw <ServiceError> {code:ServiceErrorCode.NotFound, message:'No se ha encontrado el trato comercial.'}
         }
     }
 
@@ -1184,7 +1184,7 @@ export class LiveGameInstance{
         return result;
     }
 
-    sendEvent(player:InstancePlayer,type:string,data:any):void{
+    private sendEvent(player:InstancePlayer,type:string,data:any):void{
         const send = getMessageSender(player.playerId);
         if(send){
             send({type,data});

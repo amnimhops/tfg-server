@@ -325,6 +325,7 @@ export interface SpyReport {
 
 export interface TradingAgreement{
     id?:number;
+    accepted?:boolean;
     srcPlayerId:string;
     dstPlayerId:string;
     offer:ResourceAmount[];

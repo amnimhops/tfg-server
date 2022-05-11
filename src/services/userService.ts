@@ -1,7 +1,7 @@
 
 import { Collections, Connection, Repository } from "../persistence/repository";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
-import { BasicRESTService } from "./restService";
+import { BasicRESTService, IRestService } from "./restService";
 import { User } from '../models/monolyth';
 import * as crypto from 'crypto';
 import { setSession } from "../live/sessions";
@@ -16,8 +16,12 @@ export interface LoginRequest{
     email:string;
     password:string;
 }
-
-export class UserService extends BasicRESTService<User>{
+export interface IUserService extends IRestService<User>{
+    authenticate(request:LoginRequest):Promise<string>;
+    checkEmailIsNotInUse(user:User):Promise<void>;
+    requestPasswordChange(email:string):Promise<PasswordRecoveryRequest>;
+}
+export class UserService extends BasicRESTService<User> implements IUserService{
     private passwordTokenRepo:Repository<PasswordRecoveryRequest>;
     constructor(connection:Connection){
         super(connection,Collections.Users)

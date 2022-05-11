@@ -2,9 +2,9 @@ import { Router,Request,Response } from "express";
 import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, InstancePlayer, Message, SearchResult, TradingAgreement, User, Vector, WorldMapQuery, WorldMapSector } from "../models/monolyth";
 
 import { Connection } from "../persistence/repository";
-import { InstanceService } from "../services/instanceService";
+import { IInstanceService, InstanceService } from "../services/instanceService";
 import { ServiceError } from "../models/errors";
-import { LoginRequest, PasswordRecoveryRequest, UserService } from "../services/userService";
+import { IUserService, LoginRequest, PasswordRecoveryRequest, UserService } from "../services/userService";
 import { GameplayService } from "../services/gameplayService";
 import { GameService } from "../services/gameService";
 
@@ -92,7 +92,7 @@ function setupRouter(
     router.patch('/instance/queue/:id',(request:Request<{id:number},void,{offset:number}>,response:Response<void>) =>{
         handleRequest(gameplay.changeActivityOrder(request.headers.authorization,request.params.id,request.body.offset),response);
     });
-    router.delete('/instance/queue/:id',(request:Request<{id:number},string,{type:ActivityType,target:ActivityTarget}>,response:Response<string>) =>{
+    router.delete('/instance/queue/:id',(request:Request<{id:number},void,{}>,response:Response<void>) =>{
         handleRequest(gameplay.cancelActivity(request.headers.authorization,request.params.id),response);
     });
     router.get('/instance/map',(request:Request<{},WorldMapSector,{},string>,response:Response<WorldMapSector>) =>{
@@ -108,12 +108,12 @@ function setupRouter(
         handleRequest(gameplay.cancelTradeAgreement(request.headers.authorization,request.params.id),response)
     });
 
-    router.post('/instance/trades/:id/accept',(request:Request<{id:number}>, response:Response<void>) => {
+    router.patch('/instance/trades/:id',(request:Request<{id:number}>, response:Response<void>) => {
         handleRequest(gameplay.acceptTradeAgreement(request.headers.authorization,request.params.id),response)
     });
 
-    router.get('/instance/trades/:id/status',(request:Request<{id:number}>, response:Response<string>) => {
-        handleRequest(gameplay.tradeAgreementActive(request.headers.authorization,request.params.id),response)
+    router.get('/instance/trades/:id',(request:Request<{id:number}>, response:Response<TradingAgreement>) => {
+        handleRequest(gameplay.getTradingAgreement(request.headers.authorization,request.params.id),response)
     });
 
 
@@ -122,8 +122,8 @@ function setupRouter(
 }
 
 export interface GameAPI{
-    userService:UserService;
-    instanceService:InstanceService;
+    userService:IUserService;
+    instanceService:IInstanceService;
     router:Router
 }
 
