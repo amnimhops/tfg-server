@@ -82,7 +82,7 @@ export class Connection {
     private collections:Record<string,Collection> = {};
     
     async connect(settings: ConnectionConfig): Promise<void> {
-        this.client = new MongoClient("mongodb+srv://"+process.env."/"+settings.database+"?retryWrites=true&w=majority")
+        this.client = new MongoClient("mongodb+srv://"+process.env.connectionString+"/"+settings.database+"?retryWrites=true&w=majority")
         /*this.client = new MongoClient(`mongodb://${settings.host}`, {
             auth: {
                 username: settings.user,
