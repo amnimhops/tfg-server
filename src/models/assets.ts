@@ -67,7 +67,7 @@ export function createAsset(id:string,type:'image'|'sound'|'text'|'json',url:str
  * URL desde donde se almacenan los recursos, convendrá parametrizar
  * este valor.
  */
-const ASSETS_URL = 'http://192.168.10.131:3000/assets/';
+const ASSETS_URL = process.env.assetsPath || 'http://192.168.10.131:3000/assets/';
 
 export const assets = [
     createAsset(ConstantAssets.HEX_SELECTED,'image', ASSETS_URL + 'resources/hex-selected.png'),
