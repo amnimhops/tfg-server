@@ -26,13 +26,14 @@ let server:Server = null;
 
 
 export function startExpress(apiRouter:express.Router){
+    const ASSETS_FOLDER = process.env.assetsFolder || '../../../web/src/assets';
     app.use(express.json());
     app.use(cors(corsOpts));
     app.use('/websocket',wsRouter.ws('/',wsHandler));
     app.use('/',apiRouter);
     // recursos graficos
     //app.use('/static', express.static(__dirname + '/public'));
-    app.use('/assets', express.static(path.join(__dirname,'../../../web/src/assets')));
+    app.use('/assets', express.static(path.join(__dirname,ASSETS_FOLDER)));
 
     server = app.listen(port);    
 
