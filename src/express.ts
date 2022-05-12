@@ -33,7 +33,9 @@ export function startExpress(apiRouter:express.Router){
     app.use('/',apiRouter);
     // recursos graficos
     //app.use('/static', express.static(__dirname + '/public'));
-    app.use('/assets', express.static(path.join(__dirname,ASSETS_FOLDER)));
+    const folder = path.join(__dirname,ASSETS_FOLDER);
+    console.log('Asset folder found at',folder);
+    app.use('/assets', express.static(folder));
 
     server = app.listen(port);    
 
