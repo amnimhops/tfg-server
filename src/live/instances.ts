@@ -1,11 +1,11 @@
 import { EventEmitter } from "../models/events";
 import { countdown, countdownStr, fmtResourceAmount, randomInt, randomItem, toMap } from "../models/functions";
-import { Activity,GameEvents, ActivityType, Cell, Game, GameInstance, Placeable, Resource, Technology, PlaceableInstance, ResourceFlow, Stockpile, Properties, flowPeriodRanges, ConstantProperties, InstancePlayer, EnqueuedActivity, CellInstance, MessageContentType, MessageType, ResourceAmount, SpyReport, Message, Vector, SearchResult, TradingAgreement, Asset, Media, Player, User, ActivityTarget, WorldMapQuery, WorldMapSector, WorldPlayer } from "../models/monolyth";
+import { Activity,GameEvents, ActivityType, Cell, Game, GameInstance, Placeable, Resource, Technology, PlaceableInstance, ResourceFlow, Stockpile, Properties, flowPeriodRanges, ConstantProperties, InstancePlayer, EnqueuedActivity, CellInstance, MessageContentType, MessageType, ResourceAmount, SpyReport, Message, Vector, SearchResult, TradingAgreement, Asset, Media, Player, User, ActivityTarget, WorldMapQuery, WorldMapSector, WorldPlayer, GameInstanceSummary, LivegameInstanceSummary } from "../models/monolyth";
 import { ActivityAvailability, ActivityCost, AttackActivityTarget, BuildingActivityTarget, ClaimActivityTarget, DismantlingActivityTarget, ExplorationActivityTarget, ResearchActivityTarget, SpyActivityTarget } from '../models/activities'
 import { CombatPlayer, CombatResult, CombatUnit, CombatUnitInfo, createCombatSummary } from '../models/combat'
 import { ServiceError, ServiceErrorCode } from "../models/errors";
-import {assets} from '../models/assets'
-import { getMessageSender } from "./sessions";
+import { countInstancePlayers, getMessageSender } from "./sessions";
+import { getFakeAssets } from "../models/assets";
 
 const MESSAGES_PER_PAGE = 25;
 const DEFAULT_RADIUS = 2;
@@ -135,6 +135,7 @@ export class LiveGameInstance{
     private lastQueueCheck:number;
     private queueInterval:NodeJS.Timer;
     private resourceInterval:NodeJS.Timer;
+    private startDate:number;
     private assets:Asset[] = [];
     constructor(private instance:GameInstance,private game:Game){
 
@@ -146,12 +147,26 @@ export class LiveGameInstance{
             technologies : toMap(game.technologies, (tech) => tech.id)
         }
 
+        this.startDate = Date.now();
         this.collectAssets();
 
         this.resourceInterval = setInterval(this.processResourceFlows.bind(this),1000);
         this.queueInterval = setInterval(this.processQueue.bind(this),100);
+        
+        console.log('Instancia',this.instance.id,'arrancada');
     }
 
+    stop(){
+        clearInterval(this.queueInterval);
+        clearInterval(this.resourceInterval);
+        console.log('Instancia',this.instance.id,'parada');
+    }
+    public getGameInstance():GameInstance{
+        return this.instance;
+    }
+    public getStartDate(){
+        return this.startDate;
+    }
     /**
      * Recolecta toda la información de medios de la instancia
      */
@@ -179,11 +194,14 @@ export class LiveGameInstance{
     }
 
     getAssets():Asset[]{
-        return assets;
+        return getFakeAssets();
     }
 
     get gameId():string{
         return this.instance.gameId;
+    }
+    get id():string{
+        return this.instance.id;
     }
     /**
      * 
@@ -1301,6 +1319,34 @@ export function addInstance(instance:GameInstance, game:Game){
 
 export function getInstances():LiveGameInstance[]{
     return Object.values(instances);
+}
+
+/**
+ * Para una instancia, borra todos sus temporizadores y la saca de memoria.
+ * @param id  Identificador de la instancia
+ */
+export function removeInstance(id:string):GameInstance{
+    const instance = getInstance(id);
+   
+    instance.stop();
+    delete instances[id];
+    console.log('Instancia',id,'eliminada');
+
+    return instance.getGameInstance();
+}
+
+export function getSummaries():Record<string,LivegameInstanceSummary>{
+    const summaries : Record<string,LivegameInstanceSummary> = {};
+    
+    for(const id in instances){
+        summaries[id] = {
+            connectedPlayers:countInstancePlayers(id),
+            uptime:Date.now()-instances[id].getStartDate(),
+
+        }
+    }
+
+    return summaries;
 }
 
 export function getInstance(id:string):LiveGameInstance{

@@ -26,16 +26,21 @@ let server:Server = null;
 
 
 export function startExpress(apiRouter:express.Router){
-    const ASSETS_FOLDER = process.env.assetsFolder || '../../../web/src/assets';
-    app.use(express.json());
+    const STATIC_FOLDER = process.env.STATIC_FOLDER;
+    if(!STATIC_FOLDER) throw new Error("Static folder not found");
+
+    app.use(express.json({
+        limit:'5mb' // Necesario para la subida de imágenes
+    }));
     app.use(cors(corsOpts));
+    
     app.use('/websocket',wsRouter.ws('/',wsHandler));
     app.use('/',apiRouter);
     // recursos graficos
     //app.use('/static', express.static(__dirname + '/public'));
-    const folder = path.join(__dirname,ASSETS_FOLDER);
-    console.log('Asset folder found at',folder);
-    app.use('/assets', express.static(folder));
+    console.log('Asset folder found at',STATIC_FOLDER);
+    app.use('/public', express.static(STATIC_FOLDER));
+    app.use('/backoffice', express.static(STATIC_FOLDER+"backoffice/"));
 
     server = app.listen(port);    
 

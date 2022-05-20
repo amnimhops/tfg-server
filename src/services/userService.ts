@@ -2,20 +2,10 @@
 import { Collections, Connection, Repository } from "../persistence/repository";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { BasicRESTService, IRestService } from "./restService";
-import { User } from '../models/monolyth';
+import { LoginRequest, PasswordRecoveryRequest, SearchParams, User } from '../models/monolyth';
 import * as crypto from 'crypto';
 import { setSession } from "../live/sessions";
 
-export interface PasswordRecoveryRequest{
-    id?:string; // Unique, actuará como token
-    email:string;
-    requestDate:Date;
-}
-
-export interface LoginRequest{
-    email:string;
-    password:string;
-}
 export interface IUserService extends IRestService<User>{
     authenticate(request:LoginRequest):Promise<string>;
     checkEmailIsNotInUse(user:User):Promise<void>;
@@ -53,7 +43,7 @@ export class UserService extends BasicRESTService<User> implements IUserService{
         }
     }
 
-    async create(entity: User): Promise<string> {
+    async create(entity: User): Promise<User> {
         await this.checkEmailIsNotInUse(entity);
         return await super.create(entity);
     }

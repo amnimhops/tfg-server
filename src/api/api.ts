@@ -1,13 +1,28 @@
 import { Router,Request,Response } from "express";
-import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, InstancePlayer, Message, SearchResult, TradingAgreement, User, Vector, WorldMapQuery, WorldMapSector } from "../models/monolyth";
+import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, GameInstance, GameInstanceSummary, InstancePlayer, LoginRequest, Message, PasswordRecoveryRequest, SearchResult, TradingAgreement, User, Vector, WorldMapQuery, WorldMapSector } from "../models/monolyth";
 
 import { Connection } from "../persistence/repository";
-import { IInstanceService, InstanceService } from "../services/instanceService";
+import { IInstanceService, InstanceService, reduceInstance } from "../services/instanceService";
 import { ServiceError } from "../models/errors";
-import { IUserService, LoginRequest, PasswordRecoveryRequest, UserService } from "../services/userService";
+import { IUserService, UserService } from "../services/userService";
 import { GameplayService } from "../services/gameplayService";
-import { GameService } from "../services/gameService";
+import { FileUpload, UploadService } from "../services/uploadService";
+import { GameService, reduceGame } from "../services/gameService";
+import { readdir } from "fs";
 
+/**
+ * En cumplimiento de los estándares REST las búsquedas
+ * han de hacerse mediante una solicitud GET. Esto presenta
+ * el inconveniente de que, al enviar los parámetros por la
+ * url, no podemos emplear objetos complejos. Para solucionar
+ * este bache, todas las búsquedas serán suministradas como
+ * cadenas de texto en base64, cuyo contenido será el JSON con
+ * los argumentos de búsqueda.
+ * que podemos e
+ */
+interface B64Search{
+    q:string;
+}
 
 function handleRequest<Output>( task:Promise<Output>, response:Response<Output|string>):void {
     task.then( (result:Output) => {
@@ -18,26 +33,32 @@ function handleRequest<Output>( task:Promise<Output>, response:Response<Output|s
     });
 }
 
+function unwrapSearch<T>(b64str:string):T{
+    const object = JSON.parse(Buffer.from(b64str,'base64').toString());
+    console.log(object);
+    return object;
+}
 // NOTA, recuerda avisar del asunto del CORS (npm install cors)
 function setupRouter(
     users:UserService,
     instances:InstanceService,
     gameplay:GameplayService,
-    games:GameService):Router{
+    games:GameService,
+    uploads:UploadService):Router{
 
     const router = Router({strict:true});
     
-    router.get(['/users','/users/'],(request:Request, response:Response<User[]|string>) => {
-        handleRequest(users.find(request.query),response);
+    router.get(['/users','/users/'],(request:Request<{},{},SearchResult<User>,B64Search>, response:Response<SearchResult<User>>) => {
+        handleRequest(users.search(unwrapSearch(request.query.q)),response);
     });
-    router.get('/users/:id',(request:Request<{id:string}>, response:Response<string>) => {
+    router.get('/users/:id',(request:Request<{id:string}>, response:Response<User>) => {
         handleRequest(users.load(request.params.id),response);
     });
     
-    router.post('/users',(request:Request<{},any,User>, response:Response<string>) => {
+    router.post('/users',(request:Request<{},any,User>, response:Response<User>) => {
         handleRequest(users.create(request.body),response);
     });
-    router.put('/users/:id',(request:Request<{id:string},any,User>, response:Response<string>) => {
+    router.put('/users/:id',(request:Request<{id:string},any,User>, response:Response<User>) => {
         // Los modelos empleados ya incorporan el ID
         handleRequest(users.update(request.body),response);
     });
@@ -47,15 +68,75 @@ function setupRouter(
     router.post(['/users/recoveryTokens'],(request:Request<{},PasswordRecoveryRequest,{email:string}>, response:Response<PasswordRecoveryRequest|string>) => {
         handleRequest(users.requestPasswordChange(request.body.email),response);
     });
+    
     router.post('/sessions/login',(request:Request<{},string,LoginRequest>,response:Response<string>) =>{
         handleRequest(users.authenticate(request.body),response);
     });
-    router.get('/games',(request:Request<{},Partial<Game[]>,{}>,response:Response<Partial<Game[]>>) =>{
+    // Este endpoint aunque parecido al de búsqueda de juegos, solo devuelve un listado
+    router.get('/gamelist',(request:Request<{},Partial<Game[]>,{}>,response:Response<Partial<Game[]>>) =>{
         handleRequest(games.getGameList(),response);
     });
+    // Búsqueda de juegos, pero de info. parcial ojo!
+    router.get(['/games','/games/'],(request:Request<{},{},SearchResult<Partial<Game>>,B64Search>,response:Response<SearchResult<Partial<Game>>>) =>{
+        handleRequest(games.searchPartial(unwrapSearch(request.query.q)),response);
+    });
+    /* Esto devuelve el juego al completo, es una solicitud tocha */
+    router.get('/games/:id',(request:Request<{id:string}>, response:Response<Game>) => {
+        handleRequest(games.load(request.params.id),response);
+    });
+    /* Esto devuelve el juego al completo, es una solicitud tocha */
+    router.post('/games',(request:Request<{},Partial<Game>,Game>,response:Response<Partial<Game>>) => {
+        // Hacemos un pequeño apaño para no devolver de nuevo TODO el juego como 
+        // respuesta al post
+        handleRequest(games.create(request.body).then( (game) => reduceGame(game)),response);
+    });
+    router.put('/games/:id',(request:Request<{id:string},Partial<Game>,Game>, response:Response<Partial<Game>>) => {
+        // Los modelos empleados ya incorporan el ID
+        handleRequest(games.update(request.body).then( reduceGame ),response);
+    });
+    // La información de la instancia no está diseñada para ser transmitida. En su lugar,
+    // para esta solicitud se devolverá un GameInstanceSummary con datos relevantes sobre el elemento.
+    router.get(['/instances','/instances/'],(request:Request<{},{},SearchResult<GameInstanceSummary>,B64Search>,response:Response<SearchResult<GameInstanceSummary>>) =>{
+        handleRequest(instances.searchSummaries(unwrapSearch(request.query.q)),response);
+    });
+
+    /* Esto devuelve el juego al completo, es una solicitud tocha */
+    router.get('/instances/:id',(request:Request<{id:string}>, response:Response<Partial<GameInstance>>) => {
+        handleRequest(instances.load(request.params.id).then( reduceInstance ),response);
+    });
+    
+    router.post('/instances',(request:Request<{},Partial<GameInstance>,GameInstance>,response:Response<Partial<GameInstance>>) => {
+        handleRequest(instances.create(request.body).then( (instance) => reduceInstance(instance)),response);
+    });
+    /**
+     * en una instancia  solo se pueden hacer cambios parciales (maximo de jugadores)
+     */
+    router.patch('/instances/:id',(request:Request<{id:string},Partial<GameInstance>,GameInstance>,response:Response<Partial<GameInstance>>) => {
+        handleRequest(instances.updateNumPlayers(request.params.id,request.body),response);
+    });
+    /**
+     * Actualización del estado de ejecución de una instancia
+     */
+    router.put('/instances/:id/status',(request:Request<{id:string},string>,response:Response<string>) => {
+        handleRequest(instances.changeStatus(request.params.id,request.body),response);
+    });
+    /*
+     * no hay patch de juegos
+     */
+
+    router.delete('/games/:id',(request:Request<{id:string}>, response:Response<void>) => {
+        handleRequest(games.delete(request.params.id),response)
+    });
+    
+    router.post('/uploads',(request:Request<{},string,FileUpload>,response:Response<string>)=>{
+        handleRequest(uploads.save(request.body),response);
+    });
+
+
     router.post('/games/:id/join',(request:Request<{id:string},Asset[]>,response:Response<Asset[]>) =>{
         handleRequest(gameplay.joinGame(request.headers.authorization,request.params.id),response);
     });
+
     router.get('/instance/gamedata',(request:Request<{id:string},Game>,response:Response<Game>) =>{
         handleRequest(gameplay.getGameData(request.headers.authorization),response);
     });
@@ -64,6 +145,7 @@ function setupRouter(
     router.get('/instance/players/self',(request:Request<{},Partial<InstancePlayer>,{}>,response:Response<Partial<InstancePlayer>>) =>{
         handleRequest(gameplay.getInstancePlayer(request.headers.authorization),response);
     });
+
     router.get('/instance/players/:id',(request:Request<{id:string},Partial<InstancePlayer>,{}>,response:Response<Partial<InstancePlayer>>) =>{
         handleRequest(gameplay.getInstancePlayer(request.headers.authorization,request.params.id),response);
     });
@@ -116,7 +198,6 @@ function setupRouter(
         handleRequest(gameplay.getTradingAgreement(request.headers.authorization,request.params.id),response)
     });
 
-
     console.info('Definición de rutas completada');
     return router;
 }
@@ -132,11 +213,13 @@ export function createAPI(connection:Connection):GameAPI{
     const instanceService = new InstanceService(connection);
     const gameplayService = new GameplayService(connection);
     const gameService = new GameService(connection);
+    const uploadService = new UploadService(process.env.CDN_URL,process.env.STATIC_FOLDER);
     const router = setupRouter(
         userService,
         instanceService,
         gameplayService,
-        gameService
+        gameService,
+        uploadService
     );
     
     const api : GameAPI = {

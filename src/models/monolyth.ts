@@ -1,4 +1,71 @@
+export interface FontDef{
+    name:string;
+    style:string;
+    file:string;
+}
 
+export const ConstantAssets = {
+    /* Icons */
+    UI_OK:'icon-ok',
+    UI_WARNING:'icon-warning',
+    UI_CANCEL:'icon-cancel',
+    UI_ADD:'icon-add',
+    UI_DELETE:'ui-delete',
+    /* Activities */
+    ICON_BUILD:'icon-build',
+    ICON_DISMANTLE:'icon-dismantle',
+    ICON_SPY:'icon-spy',
+    ICON_TRADE:'icon-trade',
+    ICON_ATTACK:'icon-attack',
+    ICON_CLAIM:'icon-claim',
+    ICON_EXPLORE:'icon-explore',
+    ICON_RESEARCH:'icon-research',
+    ICON_MESSAGE:'icon-message',
+    /* Map / Cells */
+    HEX_SELECTED:'hex-selected',
+    HEX_UNEXPLORED:'hex-unexplored',
+    
+    /* Section icons */
+    ICON_SECTION_AREA:'icon-section-area',
+    ICON_SECTION_RESOURCES:'icon-section-resources',
+    ICON_SECTION_TECHNOLOGY:'icon-section-technology',
+    ICON_SECTION_WORLD:'icon-section-world',
+    ICON_SECTION_ACTIVITIES:'icon-section-activities',
+    ICON_SECTION_MESSAGES:'icon-section-messages',
+    
+    /* More icons */
+    ICON_PLAYERS:'icon-players',
+    ICON_MSG_MESSAGE:'icon-msg-message',
+    ICON_MSG_NOTIFICATION:'icon-msg-notification',
+    ICON_MSG_REPORT:'icon-msg-report',
+    
+    /* Section backgrounds */
+    TECH_BACKGROUND: 'tech-background',
+    HOME_BACKGROUND: 'home-background',
+    RESOURCE_BACKGROUND: 'resource-background',
+    MESSAGING_BACKGROUND: 'messaging-background',
+    ACTIVITY_BACKGROUND: 'activity-background',
+
+    /* Messaging section assets */
+    MESSAGING_MESSAGE : 'messaging-message-image',
+    MESSAGING_NOTIFICATION : 'messaging-notification-image',
+    MESSAGING_REPORT : 'messaging-report-image',
+
+    /* Elementos desconocidos */
+    UNKNOWN_IMAGE:'unknown_image'
+}
+
+export const Privileges = {
+    Play:'play',
+    UseBackoffice:'useBackoffice',
+    AddUser:'addUser',
+    EditUser:'editUser',
+    DeleteUser:'deleteUser',
+    BanPlayer:'banPlayer',
+    AddGame:'addGame',
+    EditGame:'editGame',
+    EditOwnedGame:'editOwnedGame'
+}
 
 export const GameEvents = {
     StockpilesChanged:'stockpiles_changed',
@@ -29,6 +96,7 @@ export const ConstantProperties = {
     SpyAvoid:'spyAvoid',
     Attack:'attack',
     Defence:'defence',
+    ProductionMultiplier:'productionMultiplier',
     Health:'health',
     Luck:'luck',
     Indestructible:'indestructible',
@@ -37,18 +105,130 @@ export const ConstantProperties = {
     Weight:'weight'
 };
 
-type Property = {
-    [propName:string]:string|number;
+export type PropDesc = {
+    prop:string;
+    text:string;
+    type:'number'|'boolean'|'text'
+}
+
+export const PropertyDescriptions:PropDesc[] = [
+    {prop:ConstantProperties.QueueCapacity,text:"Capacidad de la cola, determina el máximo número de actividades que se pueden encolar.",type:'number'},
+    {prop:ConstantProperties.QueueNumProcesses,text:"Tareas en paralelo, determina el número de actividades en cola que se pueden ejecutar a la vez.",type:'number'},
+    {prop:ConstantProperties.SpySucceed,text:"Espionaje, determina la probabilidad de éxito en una misión de espionaje",type:'number'},
+    {prop:ConstantProperties.SpyAvoid,text:"Evasión, determina la capacidad de evadir una misión de espionaje.",type:'number'},
+    {prop:ConstantProperties.Attack,text:"Capacidad ofensiva, determina la cantidad de daño que efectua la unidad en cada asalto.",type:'number'},
+    {prop:ConstantProperties.Defence,text:"Capacidad defensiva, determina cuanto daño es capaz de absorber en cada ataque.",type:'number'},
+    {prop:ConstantProperties.ProductionMultiplier,text:"Factor multiplicador a los recursos producidos en esta celda",type:'number'},
+    {prop:ConstantProperties.Health,text:"Puntos de vida, determina el aguante de la unidad",type:'number'},
+    {prop:ConstantProperties.Luck,text:"Suerte, determina en un ataque quién ataca o defiende primero (unidad y jugador)",type:'number'},
+    {prop:ConstantProperties.Indestructible,text:"Determina si la estructura puede ser destruida en un ataque",type:'boolean'},
+    {prop:ConstantProperties.TransportCapacity,text:"Capacidad de carga de la unidad, determina cuanto botín se puede cargar en una ofensiva exitosa",type:'number'},
+    {prop:ConstantProperties.InfluenceRadius,text:"Radio de influencia del jugador (acumulativo), determina el número de celdas a su alrededor con las que puede interactuar",type:'number'},
+    {prop:ConstantProperties.Weight,text:"Masa de la unidad, determina el peso en la carga. En caso de un ataque exitoso determina el peso máximo que puede transportar. En combinación con la capacidad de carga determina la recompensa.",type:'number'},
+]
+
+export const CellProperties = [
+    ConstantProperties.ProductionMultiplier
+]
+
+export const PlayerProperties = [
+    ConstantProperties.QueueCapacity,
+    ConstantProperties.QueueNumProcesses,
+    ConstantProperties.SpySucceed,
+    ConstantProperties.SpyAvoid,
+    ConstantProperties.Luck,
+    ConstantProperties.InfluenceRadius
+]
+
+export const TechnologyProperties = [
+    ConstantProperties.QueueCapacity,
+    ConstantProperties.QueueNumProcesses,
+    ConstantProperties.SpySucceed,
+    ConstantProperties.SpyAvoid,
+    ConstantProperties.Attack,
+    ConstantProperties.Defence,
+    ConstantProperties.Luck,
+    ConstantProperties.TransportCapacity,
+    ConstantProperties.InfluenceRadius,
+    ConstantProperties.Weight
+]
+
+export const ResourceProperties = [
+    ConstantProperties.SpyAvoid,
+    ConstantProperties.Attack,
+    ConstantProperties.Defence,
+    ConstantProperties.Health,
+    ConstantProperties.Luck,
+    ConstantProperties.TransportCapacity,
+    ConstantProperties.InfluenceRadius,
+    ConstantProperties.Weight
+
+]
+/*
+export const ActivityPropertyMap : Map<ActivityType,string[]> = new Map([
+    [ActivityType.Attack,[]]
+])*/
+export interface PasswordRecoveryRequest{
+    id?:string; // Unique, actuará como token
+    email:string;
+    requestDate:Date;
+}
+
+export interface LoginRequest{
+    email:string;
+    password:string;
 }
 
 export interface Properties{
     [propName:string]:number;
 }
 
+/**
+ * Parámetros generales de búsqueda
+ */
+export interface SearchParams{
+    /**
+     * Página actual
+     */
+    page?:number;
+    /**
+     * Número de registros por página
+     */
+    records?:number;
+    /**
+     * Criterios de búsqueda
+     */
+    criteria:any;
+    /**
+     * Campo por el que se ordenará
+     */
+    sortField?:string;
+    /**
+     * Dirección del ordenamiento
+     */
+    sortOrder?:1|-1;
+    /**
+     * Atributo que determina qué campos deben
+     * devolverse en el resultado.
+     */
+    fields?:Record<string,any>;
+}
 export interface SearchResult<T>{
+    /**
+     * Numero de elementos encontrados
+     */
     count:number;
+    /**
+     * Página actual de resultados
+     */
     page:number;
+    /**
+     * Número de paginas de resultados
+     */
     pages:number;
+    /**
+     * Resultados de esta página
+     */
     results:T[];
 }
 type Pagination = {
@@ -97,6 +277,7 @@ export class Vector{
 export interface UIConfig{
     uiControlFontFamily:string;
     uiControlBackgroundColor:string;
+    uiControlBackgroundColorBrilliant:string;
     uiControlForegroundColor:string;
     uiControlFontColor:string;
     uiControlFontColorDanger:string;
@@ -104,12 +285,22 @@ export interface UIConfig{
     uiControlTextSize:string;
     uiControlTextHeadingSize:string;
     uiControlShadowColor:string;
+    uiControlPadding:string;
     uiControlBorderColor:string;
     uiControlBorderRadius:string;
     uiControlBackgroundPrimary:string;
     uiControlBackgroundSecondary:string;
+    uiSuccess:string;
+    uiWarning:string;
+    uiDanger:string;
+    uiResourceFlowPositive:string;
+    uiResourceFlowNegative:string;
 }
 
+export interface UserInterface{
+    style:UIConfig; // Cambiar cuando termines el BO
+    uiAssets:Record<string,Asset>;
+}
 export interface Asset{
     id:string;
     url:string;
@@ -169,6 +360,7 @@ export interface Resource{
     id:string;
     media:Media;
     properties:Properties;
+    requiredTech?:string;
 }
 
 export enum FlowPeriodicity{
@@ -195,6 +387,8 @@ export interface Placeable{
     properties:Properties;
     flows:ResourceFlow[]; // Estos flujos sirven para inicializar los flujos de las instancias de cada emplazable
     texture:Asset;
+    requiredTech?:string;
+    effort?:number;
 }
 
 export interface Technology{
@@ -209,6 +403,7 @@ export interface Cell{
     id:string;
     media:Media;
     texture:Asset;
+    color:string;
     allowedPlaceableIds:string[];
     properties:Properties
 }
@@ -216,15 +411,22 @@ export interface GameConfig{
     defaultPlayerProperties:Properties;
     unknownCellId:string;
 }
+export interface GameRating{
+    score:number;
+    votes:number;
+}
 export interface Game{
     id?:string
     media:Media;
+    gallery?:Asset[];
+    userInterface?:UserInterface;
     ownerId:string;
     cells:Cell[];
     technologies:Technology[];
     placeables:Placeable[];
     resources:Resource[];
     activities:Activity[];
+    rating?:GameRating;
     config:GameConfig;
 }
 export interface Stockpile{
@@ -258,9 +460,23 @@ export interface CellInstance{
     placeables:PlaceableInstance[];
     position:Vector;
 }
+
+export interface LivegameInstanceSummary{
+    uptime:number;
+    connectedPlayers:number;
+}
+export interface GameInstanceSummary{
+    id:string;
+    size:number;
+    gameId:string;
+    gameName:string;
+    numPlayers:number;
+    liveData:LivegameInstanceSummary;
+}
 export interface GameInstance{
     id?:string
     size:number;
+    maxPlayers:number;
     gameId:string;
     players:InstancePlayer[];
     pendingTradingAgreements:TradingAgreement[];

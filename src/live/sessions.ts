@@ -1,7 +1,5 @@
 import { InstancePlayer, Player, User } from "../models/monolyth";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
-import { Instance } from "express-ws";
-
 
 interface MessageSender{
     (message:any):void;
@@ -110,4 +108,19 @@ export function bindMessageHandler(auth:string,handler:MessageSender){
 export function unbindMessageHandler(auth:string){
     const session = getSession(auth); // throws 401
     session.sendMessage = null;
+}
+
+/**
+ * Devuelve el número de jugadores conectados a una instancia
+ * @param id 
+ * @returns 
+ */
+export function countInstancePlayers(id:string){
+    let i = 0;
+    for(const key in sessions){
+        if(sessions[key].instancePlayer?.instanceId == id){
+            i++;
+        }
+    }
+    return i;
 }
