@@ -1,11 +1,11 @@
 import { randomUUID } from 'crypto';
-import { createAsset, getFakeAssets } from './assets';
-import { randomInt, randomItem, range } from './functions';
-import { emptyUserInterface } from './interface';
-import { User,Activity, ActivityType, Asset, Cell, CellInstance, ConstantProperties, FlowPeriodicity, Game, GameInstance, InstancePlayer, Media, Placeable, Player, Properties, Resource, ResourceFlow, Technology, Vector } from './monolyth';
+import { createAsset, getDefaultStaticAssets, setupRandomAssets } from './assets';
+import { randomInt, randomItem, randomProbability, range } from './functions';
+import { defaultUserInterface } from './interface';
+import { User,Activity, ActivityType, Asset, Cell, CellInstance, ConstantProperties, FlowPeriodicity, Game, GameInstance, InstancePlayer, Media, Placeable, Properties, Resource, ResourceFlow, Technology, Vector, Privileges } from './monolyth';
 
 export function mockUniverse(){
-    const assets = getFakeAssets();
+    const assets = setupRandomAssets(process.env.CDN_URL).concat(...getDefaultStaticAssets(process.env.CDN_URL));
     function randomMedia(prefix:string=''): Media {
         return {
             description: randomText(),
@@ -34,7 +34,7 @@ export function mockUniverse(){
     }
     
     function randomName(prefix: string = "name-") {
-        const dict: string[] = "abcdefghijklmnñopqrstuvwxyz ".split('');
+        const dict: string[] = "abcdefghijklmnopqrstuvwxyz".split('');
         const rnd = Math.random() * 10;
         const name: string[] = [];
         for (let i = 0; i < 3 + rnd; i++) {
@@ -119,15 +119,6 @@ export function mockUniverse(){
     
     const technologies: Technology[] = generateTechnologies();
     
-    const players: Player[] = range(NUM_PLAYERS).map(i => ({
-        id: `player-${i}`,
-        name: randomName('player Name-'),
-        surname: randomName('Surname-'),
-        email: randomName() + '@here.com',
-        birthDate: new Date(),
-        password: 'fus'
-    }));
-    
     const resources: Resource[] = range(NUM_RESOURCES).map(
         i => ({ id: `resource-${i}`, media: randomMedia('resource-'), properties: randomProperties() })
     );
@@ -176,12 +167,29 @@ export function mockUniverse(){
             texture: randomAsset('cell-texture'),
             allowedPlaceableIds: range(5).map(j => randomItem(placeables).id), // 5 aleatorios
             color:'#f0f0f0',
+            probability:Math.random(),
             properties: randomProperties()
         })
     );
+
+    const users = range(500).map( i => {
+        // Se genera un 25% de usuarios de backoffice 
+        const boUser = randomProbability(0.25);
+        const privileges = [].concat( boUser ? Privileges.UseBackoffice.id : Privileges.Play.id);
+        const email = randomName('backoffice-')+'@'+randomName()+".com";
+        const password = randomName() // Esto no es un password valido
+        const name = randomName('MyNameIs-')
+        const surname = randomName('SonOf-')
+
+        return {
+            email,name,password,privileges,surname
+        }as User;
+    });
+
     
-    const instancePlayers: InstancePlayer[] = players.map(player => ({
-        playerId: player.id!,
+    // Creamos instancias de jugadores solo para los usuarios jugadores
+    const instancePlayers: InstancePlayer[] = users.filter(user => user.privileges.includes(Privileges.Play.id)).map(user => ({
+        playerId: user.id!,
         media: randomMedia('user-profile'),
         stockpiles: resources.map(res => ({ resourceId: res.id, amount: 100 })),
         queue: [],
@@ -226,7 +234,7 @@ export function mockUniverse(){
                 spySucceed: 25
             }
         },
-        userInterface:emptyUserInterface(),
+        userInterface:defaultUserInterface(process.env.CDN_URL),
         id: `gid-${i}`
     }));
     
@@ -252,13 +260,5 @@ export function mockUniverse(){
         size: MAP_SIZE
     }));
     
-    const users = range(500).map( i => ({
-        email:randomName()+'@'+randomName(),
-        password:randomName(),
-        name:randomName(),
-        privileges:[],
-        surname:randomName()
-    }as User));    
-
     return {users,gameInstances,games}
 }

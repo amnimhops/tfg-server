@@ -1,19 +1,60 @@
 import { Collections, Connection, Repository } from "../persistence/repository";
-import { Game, GameInstance, GameInstanceSummary, Player, SearchParams, SearchResult } from "../models/monolyth";
+import { CellInstance, Game, GameInstance, GameInstanceSummary, SearchParams, SearchResult, Vector } from "../models/monolyth";
 import { addInstance, getInstance, getInstances, getSummaries, removeInstance } from "../live/instances";
 import { BasicRESTService, IRestService } from "./restService";
-import { toMap } from "../models/functions";
+import { randomItem, range, toMap } from "../models/functions";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { isNumberObject } from "util/types";
+import { randomInt } from "crypto";
 
-export interface IInstanceService extends IRestService<GameInstance>{
-    startInstances():Promise<void>
+function createInstanceCells(instance:GameInstance, game:Game):CellInstance[]{
+    /**
+     * 1.- Se suman todas las probabilidades de las celdas y se normaliza al 100% de prob.
+     * 2.- Se determina cuantas celdas de cada tipo hay que crear
+     * 3.- Se crean secuencialmente para satisfacer la probabilidad
+     * 4.- Se distribuyen aleatoriamente por el mapa.
+     */
+    const totalProb = game.cells.reduce( (prev,current) => prev + current.probability, 0);
+    const numCells = instance.size * instance.size;
+    const amounts = game.cells.map( cell => numCells * cell.probability / totalProb); // por índice de celda
+    const cells : CellInstance[] = [];
+
+    let cellIndex = 0; // Indice que tomará cada celda
+    for(let i = 0; i < amounts.length; i++){
+        const num = amounts[i];
+        const cell = game.cells[i];
+
+        for(let j = 0; j < num; j++){
+            cells.push({
+                cellId:cell.id,
+                id:cellIndex,
+                placeables:[],
+                playerId:null,
+                position:new Vector(0,0) // da igual dond diga que esté, luego se mezclarán y se recalculará
+            })
+        }
+        cellIndex++;
+    }
+    // Mezclamos
+    for(let i = 0; i < cells.length; i++) {
+        const aux = cells[i];
+        const j = Math.floor(Math.random() * cells.length);
+        cells[i] = cells[j];
+        cells[j] = aux;
+    }
+    // Ordenamos las posiciones de las celdas siguiendo el orden natural del vector
+    for(let i = 0; i< instance.size; i++){
+        for(let j = 0; j< instance.size; j++){
+            cells[i * instance.size + j].position = new Vector(j,i);
+            // MUY importante tambien volver a definir el índice, ya que
+            // debe ser siempre el índice de la celda dentro de la instancia,
+            // y al reordenar los valores deben reindexarse
+            cells[i * instance.size + j].id = i * instance.size + j;
+        }
+    }
+    // Se devuelven las celdas
+    return cells;
 }
-
-const basicInstanceFields = {id:1,size:1,players:1,gameId:1,maxPlayers:1};
-
-const START = 'start';
-const STOP = 'stop';
 /**
  * Devuelve una versión con los metadatos de la instancia, sin el grueso de la información
  * @param game 
@@ -25,12 +66,35 @@ const STOP = 'stop';
     return reduced;
 }
 
+export interface IInstanceService extends IRestService<GameInstance>{
+    startInstances():Promise<void>
+}
+
+const basicInstanceFields = {id:1,size:1,players:1,gameId:1,maxPlayers:1};
+
+const START = 'start';
+const STOP = 'stop';
+
 export class InstanceService extends BasicRESTService<GameInstance> implements IInstanceService{
     private gameStore:Repository<Game>;
 
     constructor(connection:Connection){
         super(connection,Collections.GameInstances);
         this.gameStore = connection.createRepository(Collections.Games);
+    }
+
+    /**
+     * Sobreescritura de create() para inicializar la instancia.
+     * @param entity 
+     */
+    async create(entity: GameInstance): Promise<GameInstance> {
+        // Generamos las celdas y las asignamos a la instancia
+        // Esto no se hace en el cliente por eficiencia: puede haber
+        // cientos de miles de celdas
+        const game = await this.gameStore.load(entity.gameId);
+        entity.cells = createInstanceCells(entity,game);
+        return super.create(entity);
+        //const instance = await 
     }
 
     async startInstances():Promise<void>{
@@ -135,6 +199,17 @@ export class InstanceService extends BasicRESTService<GameInstance> implements I
         }
 
         return id;
+    }
+
+    /**
+     * Sobreescritura de delete() para verificar las reglase de negocio
+     * @param id 
+     */
+    async delete(id: string): Promise<void> {
+        const inMemory = getInstances().find( instance => instance.id == id);
+        if(inMemory) throw <ServiceError>{code:ServiceErrorCode.Conflict,message:"No se puede borrar una instancia que está en ejecución"};
+        
+        return await super.delete(id);
     }
 
 }

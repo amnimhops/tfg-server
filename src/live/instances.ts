@@ -1,11 +1,11 @@
 import { EventEmitter } from "../models/events";
 import { countdown, countdownStr, fmtResourceAmount, randomInt, randomItem, toMap } from "../models/functions";
-import { Activity,GameEvents, ActivityType, Cell, Game, GameInstance, Placeable, Resource, Technology, PlaceableInstance, ResourceFlow, Stockpile, Properties, flowPeriodRanges, ConstantProperties, InstancePlayer, EnqueuedActivity, CellInstance, MessageContentType, MessageType, ResourceAmount, SpyReport, Message, Vector, SearchResult, TradingAgreement, Asset, Media, Player, User, ActivityTarget, WorldMapQuery, WorldMapSector, WorldPlayer, GameInstanceSummary, LivegameInstanceSummary } from "../models/monolyth";
+import { Activity,GameEvents, ActivityType, Cell, Game, GameInstance, Placeable, Resource, Technology, PlaceableInstance, ResourceFlow, Stockpile, Properties, flowPeriodRanges, ConstantProperties, InstancePlayer, EnqueuedActivity, CellInstance, MessageContentType, MessageType, ResourceAmount, SpyReport, Message, Vector, SearchResult, TradingAgreement, Asset, Media, User, ActivityTarget, WorldMapQuery, WorldMapSector, WorldPlayer, GameInstanceSummary, LivegameInstanceSummary} from "../models/monolyth";
 import { ActivityAvailability, ActivityCost, AttackActivityTarget, BuildingActivityTarget, ClaimActivityTarget, DismantlingActivityTarget, ExplorationActivityTarget, ResearchActivityTarget, SpyActivityTarget } from '../models/activities'
 import { CombatPlayer, CombatResult, CombatUnit, CombatUnitInfo, createCombatSummary } from '../models/combat'
 import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { countInstancePlayers, getMessageSender } from "./sessions";
-import { getFakeAssets } from "../models/assets";
+import {  } from "../models/assets";
 
 const MESSAGES_PER_PAGE = 25;
 const DEFAULT_RADIUS = 2;
@@ -167,11 +167,12 @@ export class LiveGameInstance{
     public getStartDate(){
         return this.startDate;
     }
+
     /**
      * Recolecta toda la información de medios de la instancia
      */
     private collectAssets(){
-        /*const media : Media[] = [];
+        const media : Media[] = [];
         media.push(...this.game.activities.map( activity => activity.media));
         media.push(...this.game.cells.map( cell => cell.media));
         media.push(...this.game.placeables.map( placeable => placeable.media));
@@ -185,16 +186,34 @@ export class LiveGameInstance{
             element.thumbnail,
         ]).flat());
         
-        this.assets.push(...getConstantAssets())
-        //const map = toMap(this.assets,(asset)=>asset.id); // Esto eliminará los duplicados por id
-        */
+        
+        // Estilos fijos de la sección de interfaz
+        // Los estilos fijos se definen durante la creación del
+        // juego, e inicialmente tienen los valores determinados
+        // en getDefaultStaticAssets()
+        this.assets.push(...Object.values(this.game.userInterface.uiAssets));
+        // Añadir las texturas!!
+        this.assets.push(...this.game.placeables.map( placeable => placeable.texture));
+        this.assets.push(...this.game.cells.map( cell => cell.texture));
+        this.assets.push(...this.game.technologies.map( tech => tech.texture));
 
-        //** A VER POR QUE LOS PUTOS ASSETS ESTAN VACIOS COJOPN
-        //return assets;
+        // Mapeamos y desmapeamos, así eliminamos duplicados (el select distinct de javascript)
+        const map = toMap(this.assets,(asset)=>asset.id); 
+        
+        this.assets = Object.values(map);
+        /*this.assets.push({
+            id:'game-style',type:'style',url:process.env.CDN_URL+"assets/test.css"
+        }as Asset);*/
+        /**
+         * Esta linea inyecta en los assets el metaestilo de cada juego, generado dinámicamente.
+         */
+        this.assets.push({
+            id:'game-style',type:'style',url:process.env.API_URL+"games/"+this.gameId+"/style.css"
+        }as Asset);
     }
 
     getAssets():Asset[]{
-        return getFakeAssets();
+        return this.assets;
     }
 
     get gameId():string{
@@ -698,11 +717,13 @@ export class LiveGameInstance{
                     sector.map.push({
                         position:cell.position,
                         cellId:cell.cellId,
+                        color:this.gamedex.cells[cell.cellId].color,
                         playerId:cell.playerId||undefined
                     });
                 }else{
                     sector.map.push({
-                        position:new Vector(x,y)
+                        position:new Vector(x,y),
+                        color:'#f0f0f0'
                     }); 
                 }  
             }
@@ -1274,7 +1295,7 @@ export class LiveGameInstance{
      * desarrollarse.
      */
     canAddNewPlayers():boolean{
-        return (this.countFreeCells() / this.instance.cells.length) < 0.9;
+        return (this.countFreeCells() / this.instance.cells.length) > 0.1;
     }
 
     createPlayer(player:User):InstancePlayer{

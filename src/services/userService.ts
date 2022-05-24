@@ -2,15 +2,19 @@
 import { Collections, Connection, Repository } from "../persistence/repository";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { BasicRESTService, IRestService } from "./restService";
-import { LoginRequest, PasswordRecoveryRequest, SearchParams, User } from '../models/monolyth';
+import { LoginRequest, PasswordRecoveryRequest, SearchParams, User, WithToken } from '../models/monolyth';
 import * as crypto from 'crypto';
 import { setSession } from "../live/sessions";
 
+function securePass(pass:string):string{
+    return crypto.createHash('md5').update(pass).digest('hex')
+}
 export interface IUserService extends IRestService<User>{
-    authenticate(request:LoginRequest):Promise<string>;
+    authenticate(request:LoginRequest):Promise<WithToken<User>>;
     checkEmailIsNotInUse(user:User):Promise<void>;
     requestPasswordChange(email:string):Promise<PasswordRecoveryRequest>;
 }
+
 export class UserService extends BasicRESTService<User> implements IUserService{
     private passwordTokenRepo:Repository<PasswordRecoveryRequest>;
     constructor(connection:Connection){
@@ -20,8 +24,10 @@ export class UserService extends BasicRESTService<User> implements IUserService{
         console.info('Servicio de usuarios iniciado')
     }
 
-    async authenticate(request:LoginRequest):Promise<string>{
-        const users = await this.repository.find({...request});
+    async authenticate(request:LoginRequest):Promise<WithToken<User>>{
+        const email = request.email;
+        const password = securePass(request.password);
+        const users = await this.repository.find({email,password});
 
         if(users.length == 1){
             const user = users[0];
@@ -29,7 +35,10 @@ export class UserService extends BasicRESTService<User> implements IUserService{
             
             setSession(hash,user);
 
-            return hash;
+            return {
+                ...user,
+                token:hash
+            };
         }else{
             throw <ServiceError>{code:ServiceErrorCode.Unauthorized,message:'Las credenciales no son válidas'};
         }
@@ -45,6 +54,8 @@ export class UserService extends BasicRESTService<User> implements IUserService{
 
     async create(entity: User): Promise<User> {
         await this.checkEmailIsNotInUse(entity);
+        // No guardar el pass en plano
+        entity.password = securePass(entity.password);
         return await super.create(entity);
     }
     

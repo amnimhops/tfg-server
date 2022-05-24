@@ -4,6 +4,7 @@ import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { BasicRESTService, IRestService } from "./restService";
 import { Game, GameInstance, SearchParams, SearchResult, User } from '../models/monolyth';
 import { getInstances } from "../live/instances";
+import { generateCSS } from "../models/assets";
 
 export interface IGameService extends IRestService<Game>{
     getGameList():Promise<Partial<Game>[]>;
@@ -65,5 +66,15 @@ export class GameService extends BasicRESTService<Game> implements IGameService 
         if(inDatabase.length > 0) throw <ServiceError>{code:ServiceErrorCode.Conflict,message:"No se puede borrar un juego mientras disponga de instancias"};
 
         return super.delete(id);
+    }
+
+    /**
+     * Esta función transforma la configuración de un juego en un
+     * archivo de reglas de estilo CSS.
+     * @param id Identificador del juego
+     */
+    async getGameStylesheet(id:string):Promise<string>{
+        const game:Partial<Game> = await this.repository.load(id,{userInterface:true});
+        return generateCSS(game.userInterface.style);
     }
 }

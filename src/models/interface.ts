@@ -1,7 +1,12 @@
 import { uuid } from "uuidv4";
-import { Asset, ConstantAssets, UserInterface } from "./monolyth";
+import { ConstantAssets, getDefaultStaticAssets } from "./assets";
+import { toMap } from "./functions";
+import { Asset, UserInterface } from "./monolyth";
 
-export function emptyUserInterface():UserInterface{
+export function defaultUserInterface(cdnUrl:string):UserInterface{
+
+    const defaultAssets = toMap(getDefaultStaticAssets(cdnUrl),asset => asset.id)
+
     return {
         style:{
             "uiControlFontFamily":"Verdana",
@@ -25,8 +30,6 @@ export function emptyUserInterface():UserInterface{
             "uiSuccess":"",
             "uiControlPadding":""
         },
-        uiAssets:{
-            
-        }
+        uiAssets:defaultAssets
     }
 }

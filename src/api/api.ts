@@ -1,5 +1,5 @@
 import { Router,Request,Response } from "express";
-import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, GameInstance, GameInstanceSummary, InstancePlayer, LoginRequest, Message, PasswordRecoveryRequest, SearchResult, TradingAgreement, User, Vector, WorldMapQuery, WorldMapSector } from "../models/monolyth";
+import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, GameInstance, GameInstanceSummary, InstancePlayer, LoginRequest, Message, PasswordRecoveryRequest, SearchResult, TradingAgreement, User, Vector, WithToken, WorldMapQuery, WorldMapSector } from "../models/monolyth";
 
 import { Connection } from "../persistence/repository";
 import { IInstanceService, InstanceService, reduceInstance } from "../services/instanceService";
@@ -9,6 +9,7 @@ import { GameplayService } from "../services/gameplayService";
 import { FileUpload, UploadService } from "../services/uploadService";
 import { GameService, reduceGame } from "../services/gameService";
 import { readdir } from "fs";
+import { bigBounce } from "./initialData";
 
 /**
  * En cumplimiento de los estándares REST las búsquedas
@@ -23,6 +24,7 @@ import { readdir } from "fs";
 interface B64Search{
     q:string;
 }
+
 
 function handleRequest<Output>( task:Promise<Output>, response:Response<Output|string>):void {
     task.then( (result:Output) => {
@@ -44,10 +46,18 @@ function setupRouter(
     instances:InstanceService,
     gameplay:GameplayService,
     games:GameService,
-    uploads:UploadService):Router{
+    uploads:UploadService,
+    resetHandler:()=>Promise<any>):Router{
 
     const router = Router({strict:true});
     
+    /*
+     * Reseteo del servidor
+     */
+    router.get("/management/bigbounce",(request,response)=>{
+        handleRequest(resetHandler(),response);
+    });
+
     router.get(['/users','/users/'],(request:Request<{},{},SearchResult<User>,B64Search>, response:Response<SearchResult<User>>) => {
         handleRequest(users.search(unwrapSearch(request.query.q)),response);
     });
@@ -69,7 +79,7 @@ function setupRouter(
         handleRequest(users.requestPasswordChange(request.body.email),response);
     });
     
-    router.post('/sessions/login',(request:Request<{},string,LoginRequest>,response:Response<string>) =>{
+    router.post('/sessions/login',(request:Request<{},WithToken<User>,LoginRequest>,response:Response<WithToken<User>>) =>{
         handleRequest(users.authenticate(request.body),response);
     });
     // Este endpoint aunque parecido al de búsqueda de juegos, solo devuelve un listado
@@ -84,7 +94,22 @@ function setupRouter(
     router.get('/games/:id',(request:Request<{id:string}>, response:Response<Game>) => {
         handleRequest(games.load(request.params.id),response);
     });
-    /* Esto devuelve el juego al completo, es una solicitud tocha */
+    /**
+     * Reglas de estilo del juego. Si, aunque no lo parezca, es un endpoint de la API. Cuando una
+     * instancia es arrancada, inyecta en su lista de assets una referencia a esta URL. El cliente
+     * la recibe junto al resto de recursos gráficos al invocar el endpoint /join y la carga en memoria.
+     * Aquí lo que hacemos es decirle al servicio de juegos que transforme la configuración de la
+     * interfaz del juego en código CSS.
+     */
+    router.get('/games/:id/style.css',(request:Request<{id:string}>, response:Response<string>) => {
+        //handleRequest(games.getGameStylesheet(request.params.id),response);
+        games.getGameStylesheet(request.params.id).then( css => {
+            response.setHeader('content-type', 'text/css');
+            response.status(200).send(css);
+        })
+    });
+
+    /* Creación de nuevo juego */
     router.post('/games',(request:Request<{},Partial<Game>,Game>,response:Response<Partial<Game>>) => {
         // Hacemos un pequeño apaño para no devolver de nuevo TODO el juego como 
         // respuesta al post
@@ -119,6 +144,9 @@ function setupRouter(
      */
     router.put('/instances/:id/status',(request:Request<{id:string},string>,response:Response<string>) => {
         handleRequest(instances.changeStatus(request.params.id,request.body),response);
+    });
+    router.delete('/instances/:id',(request:Request<{id:string}>, response:Response<void>) => {
+        handleRequest(instances.delete(request.params.id),response)
     });
     /*
      * no hay patch de juegos
@@ -205,7 +233,7 @@ function setupRouter(
 export interface GameAPI{
     userService:IUserService;
     instanceService:IInstanceService;
-    router:Router
+    router:Router;
 }
 
 export function createAPI(connection:Connection):GameAPI{
@@ -219,7 +247,8 @@ export function createAPI(connection:Connection):GameAPI{
         instanceService,
         gameplayService,
         gameService,
-        uploadService
+        uploadService,
+        ()=>bigBounce(connection)
     );
     
     const api : GameAPI = {

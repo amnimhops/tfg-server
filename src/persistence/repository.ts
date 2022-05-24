@@ -1,4 +1,5 @@
 import { Db, Collection, MongoClient, ObjectId, Filter } from 'mongodb';
+import { ServiceError,ServiceErrorCode } from '../models/errors';
 import { SearchParams } from '../models/monolyth';
 import { SearchResult } from '../models/monolyth';
 
@@ -21,7 +22,7 @@ export class Repository<T extends Unique>{
             delete result['_id']; // Ocultamos el identificador interno de mongo, así los updates no generarán inconsistencias
             return result as any;
         }catch(error){
-            console.error('Error loading object',id,'from collection',this.collection.collectionName);
+            throw <ServiceError> { code:ServiceErrorCode.ServerError, message:error as string };
         }
         
     }
@@ -56,6 +57,17 @@ export class Repository<T extends Unique>{
         
     }
 
+    drop():Promise<boolean>{
+        /**
+         * MongoDB Atlas lanza un error 'MongoServerError: ns not found' si se
+         * intenta borrar una colección que no existe; lo controlamos.
+         */
+        return this.collection.drop().catch((err)=>{
+            console.log('Error al borrar',err);
+            return false;
+        });
+    }
+
     async find(query: any, projection?:{[name:string]:boolean}): Promise<T[]> {
         const data = await this.collection.find(query,{projection}).toArray()
         // Se eliminan los identificadores para impedir actualizaciones futuras
@@ -67,7 +79,7 @@ export class Repository<T extends Unique>{
 
     async search(params:SearchParams):Promise<SearchResult<T>>{
         const recordsPerPage = params.records || 50;
-        const page = params.page || 1;
+        let page = params.page || 1;
         /**
          * Las páginas tienen base 1, pero el nº de registros a saltar tiene base 0
          */
@@ -83,10 +95,15 @@ export class Repository<T extends Unique>{
             .limit(limit)
             .toArray();
         
+        /* El nº de resultados de la busqueda puede
+         * dar un nº de paginas inferior a la página
+         * requerida; ajustamos
+         */
+        const pages = Math.ceil( (+count) / recordsPerPage);
         return {
             count:(+count),
-            page:params.page,
-            pages:Math.ceil( (+count) / recordsPerPage),
+            page:Math.min(params.page,pages),
+            pages:pages,
             results:data.map( element => {
                 delete element['_id'];
                 return element as any;
@@ -107,12 +124,6 @@ export class Connection {
     async connect(): Promise<void> {
         const connectionString = process.env.CONNECTION_STRING || 'mongodb://localhost'
         this.client = new MongoClient(connectionString)
-        /*this.client = new MongoClient(`mongodb://${settings.host}`, {
-            auth: {
-                username: settings.user,
-                password: settings.password
-            }
-        });*/
 
         return this.client.connect().then(() => {
             this.db = this.client.db(process.env.DATABASE || 'fu');
@@ -139,6 +150,5 @@ export class Connection {
 export enum Collections {
     Games = "games",
     GameInstances = "gameInstances",
-    Players = "players",
     Users = "users"
 }

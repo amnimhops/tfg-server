@@ -37,12 +37,21 @@ export class BasicRESTService<Type extends Unique> implements IRestService<Type>
         return await this.repository.search(params);
     }
     async create(entity: Type): Promise<Type> {
-        const exists = await this._repository.load(entity.id);
-        if(exists) throw <ServiceError> {
-            code:ServiceErrorCode.Conflict,
-            message:`Ya existe una entidad con el identificador ${entity.id}`
+        /**
+         * Nota mental: todas las entidades tienen un ID, si se crea
+         * alguna a mano sin dicho campo, la siguiente linea devolvera
+         * cosas raras. Por ejemplo, si se crea un nuevo usuario (empty id)
+         * habiendo un usuario con id vacío en la base de datos, este método
+         * devolverá un error.
+         */
+        if(entity.id){
+            const exists = await this._repository.load(entity.id);
+            if(exists) throw <ServiceError> {
+                code:ServiceErrorCode.Conflict,
+                message:`Ya existe una entidad con el identificador ${entity.id}`
+            }
         }
-
+        
         try{
             const id = await this._repository.save(entity);
             console.log('Entidad registrada con el identificador',id);

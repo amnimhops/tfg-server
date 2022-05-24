@@ -1,14 +1,31 @@
-import { Asset } from "./monolyth";
+import { Asset, UIConfig } from "./monolyth";
 
-
+/**
+ * Asset vacío
+ */
 export const ASSET_EMPTY:Asset = {
     id:'',
     type:'image',
     url:'',
     data:null
 }
+/**
+ * Devuelve un asset con las características indicadas
+ * @param id 
+ * @param type 
+ * @param url 
+ * @param data 
+ * @returns 
+ */
+export function createAsset(id:string,type:'image'|'sound'|'text'|'json',url:string,data:any = null):Asset{
+    return {id,type,url,data}
+}
 
-export const ConstantAssets = {
+/**
+ * Claves de los assets estáticos, aquellos con nombre constante
+ * pero imagen variable
+ */
+const staticAssetKeys = {
     /* Icons */
     UI_OK:'icon-ok',
     UI_WARNING:'icon-warning',
@@ -59,55 +76,70 @@ export const ConstantAssets = {
     UNKNOWN_IMAGE:'unknown_image'
 }
 
-export function createAsset(id:string,type:'image'|'sound'|'text'|'json',url:string,data:any = null):Asset{
-    return {id,type,url,data}
+/**
+ * Devuelve los assets estáticos por defecto
+ * @param baseUrl URL donde se espera encontrar el recurso
+ * @returns 
+ */
+export function getDefaultStaticAssets(baseUrl:string):Asset[] {
+    baseUrl = baseUrl + 'default/';
+    console.log(baseUrl);
+    return [
+        createAsset(staticAssetKeys.HEX_SELECTED,'image', baseUrl + 'hex-selected.png'),
+        createAsset(staticAssetKeys.HEX_UNEXPLORED,'image', baseUrl + 'hex-unexplored.png'),
+        createAsset(staticAssetKeys.UI_OK,'image', baseUrl + 'icon-accept.svg'),
+        createAsset(staticAssetKeys.UI_ADD,'image', baseUrl + 'icon-add.svg'),
+        createAsset(staticAssetKeys.UI_DELETE,'image', baseUrl + 'icon-delete.svg'),
+        createAsset(staticAssetKeys.UI_CANCEL,'image', baseUrl + 'icon-close.svg'),
+        createAsset(staticAssetKeys.UI_WARNING,'image', baseUrl + 'icon-warning.svg'),
+
+        createAsset(staticAssetKeys.ICON_DISMANTLE,'image', baseUrl + 'icon-dismantle.svg'),
+        createAsset(staticAssetKeys.ICON_BUILD,'image', baseUrl + 'icon-build.svg'),
+        createAsset(staticAssetKeys.ICON_RESEARCH,'image', baseUrl + 'icon-research.svg'),
+        createAsset(staticAssetKeys.ICON_SPY,'image', baseUrl + 'icon-spy.svg'),
+        createAsset(staticAssetKeys.ICON_TRADE,'image', baseUrl + 'icon-trade.svg'),
+        createAsset(staticAssetKeys.ICON_ATTACK,'image', baseUrl + 'icon-attack.svg'),
+        createAsset(staticAssetKeys.ICON_CLAIM,'image', baseUrl + 'icon-claim.svg'),
+        createAsset(staticAssetKeys.ICON_EXPLORE,'image', baseUrl + 'icon-explore.svg'),
+        createAsset(staticAssetKeys.ICON_MESSAGE,'image', baseUrl + 'icon-section-messages.svg'),
+
+        createAsset(staticAssetKeys.ICON_SECTION_AREA,'image', baseUrl + 'icon-section-area.svg'),
+        createAsset(staticAssetKeys.ICON_SECTION_RESOURCES,'image', baseUrl + 'icon-section-resources.svg'),
+        createAsset(staticAssetKeys.ICON_SECTION_TECHNOLOGY,'image', baseUrl + 'icon-section-technologies.svg'),
+        createAsset(staticAssetKeys.ICON_SECTION_WORLD,'image', baseUrl + 'icon-section-world.svg'),
+        createAsset(staticAssetKeys.ICON_SECTION_ACTIVITIES,'image', baseUrl + 'icon-section-activities.svg'),
+        createAsset(staticAssetKeys.ICON_SECTION_MESSAGES,'image', baseUrl + 'icon-section-messages.svg'),
+
+        createAsset(staticAssetKeys.TECH_BACKGROUND,'image',baseUrl + 'tech-background.webp'),
+        createAsset(staticAssetKeys.RESOURCE_BACKGROUND,'image',baseUrl + 'resource-background.png'),
+        createAsset(staticAssetKeys.HOME_BACKGROUND,'image',baseUrl + 'home-background.png'),
+        createAsset(staticAssetKeys.MESSAGING_BACKGROUND,'image',baseUrl + 'messaging-background.webp'),
+        createAsset(staticAssetKeys.ACTIVITY_BACKGROUND,'image',baseUrl + 'activity-background.webp'),
+
+        createAsset(staticAssetKeys.ICON_MSG_MESSAGE,'image',baseUrl + 'icon-msg-message.svg'),
+        createAsset(staticAssetKeys.ICON_MSG_NOTIFICATION,'image',baseUrl + 'icon-msg-notification.svg'),
+        createAsset(staticAssetKeys.ICON_MSG_REPORT,'image',baseUrl + 'icon-msg-report.svg'),
+        
+        createAsset(staticAssetKeys.MESSAGING_MESSAGE,'image',baseUrl + 'image-messaging-message.png'),
+        createAsset(staticAssetKeys.MESSAGING_NOTIFICATION,'image',baseUrl + 'image-messaging-notification.png'),
+        createAsset(staticAssetKeys.MESSAGING_REPORT,'image',baseUrl + 'image-messaging-report.webp'),
+
+        createAsset(staticAssetKeys.ICON_PLAYERS,'image',baseUrl + 'icon-players.svg'),
+        createAsset(staticAssetKeys.UNKNOWN_IMAGE,'image',baseUrl + 'unknown-image.png')
+        
+    ]
 }
 
 /**
- * URL desde donde se almacenan los recursos, convendrá parametrizar
- * este valor.
+ * Lista de assets arbitrarios, empleados durante
+ * la generación de mundos aleatorios.
+ * 
+ * @param cdnLocation URL base donde se encuentran los recursos
+ * @returns Una colección de assets
  */
-
-const assets = [];
-
-export function getFakeAssets(){
-    return assets;
-}
-
-export function setupFakeAssets(cdnLocation:string):Asset[]{
-    const ASSETS_URL = cdnLocation;
-    assets.push(
-        createAsset(ConstantAssets.HEX_SELECTED,'image', ASSETS_URL + 'resources/hex-selected.png'),
-        createAsset(ConstantAssets.HEX_UNEXPLORED,'image', ASSETS_URL + 'resources/hex-unexplored.png'),
-        createAsset(ConstantAssets.UI_OK,'image', ASSETS_URL + 'ui/icon-accept.svg'),
-        createAsset(ConstantAssets.UI_ADD,'image', ASSETS_URL + 'ui/icon-add.svg'),
-        createAsset(ConstantAssets.UI_DELETE,'image', ASSETS_URL + 'ui/icon-delete.svg'),
-        createAsset(ConstantAssets.UI_CANCEL,'image', ASSETS_URL + 'ui/icon-close.svg'),
-        createAsset(ConstantAssets.UI_WARNING,'image', ASSETS_URL + 'ui/icon-warning.svg'),
-
-        createAsset(ConstantAssets.ICON_DISMANTLE,'image', ASSETS_URL + 'resources/icon-dismantle.svg'),
-        createAsset(ConstantAssets.ICON_BUILD,'image', ASSETS_URL + 'resources/icon-build.svg'),
-        createAsset(ConstantAssets.ICON_RESEARCH,'image', ASSETS_URL + 'resources/icon-research.svg'),
-        createAsset(ConstantAssets.ICON_SPY,'image', ASSETS_URL + 'resources/icon-spy.svg'),
-        createAsset(ConstantAssets.ICON_TRADE,'image', ASSETS_URL + 'resources/icon-trade.svg'),
-        createAsset(ConstantAssets.ICON_ATTACK,'image', ASSETS_URL + 'resources/icon-attack.svg'),
-        createAsset(ConstantAssets.ICON_CLAIM,'image', ASSETS_URL + 'resources/icon-claim.svg'),
-        createAsset(ConstantAssets.ICON_EXPLORE,'image', ASSETS_URL + 'resources/icon-explore.svg'),
-        createAsset(ConstantAssets.ICON_MESSAGE,'image', ASSETS_URL + 'resources/icon-section-messages.svg'),
-
-        createAsset(ConstantAssets.ICON_SECTION_AREA,'image', ASSETS_URL + 'resources/icon-section-area.svg'),
-        createAsset(ConstantAssets.ICON_SECTION_RESOURCES,'image', ASSETS_URL + 'resources/icon-section-resources.svg'),
-        createAsset(ConstantAssets.ICON_SECTION_TECHNOLOGY,'image', ASSETS_URL + 'resources/icon-section-technologies.svg'),
-        createAsset(ConstantAssets.ICON_SECTION_WORLD,'image', ASSETS_URL + 'resources/icon-section-world.svg'),
-        createAsset(ConstantAssets.ICON_SECTION_ACTIVITIES,'image', ASSETS_URL + 'resources/icon-section-activities.svg'),
-        createAsset(ConstantAssets.ICON_SECTION_MESSAGES,'image', ASSETS_URL + 'resources/icon-section-messages.svg'),
-
-        createAsset(ConstantAssets.TECH_BACKGROUND,'image',ASSETS_URL + 'images/tech-background.webp'),
-        createAsset(ConstantAssets.RESOURCE_BACKGROUND,'image',ASSETS_URL + 'images/resource-background.png'),
-        createAsset(ConstantAssets.HOME_BACKGROUND,'image',ASSETS_URL + 'images/home-background.png'),
-        createAsset(ConstantAssets.MESSAGING_BACKGROUND,'image',ASSETS_URL + 'images/messaging-background.webp'),
-        createAsset(ConstantAssets.ACTIVITY_BACKGROUND,'image',ASSETS_URL + 'images/activity-background.webp'),
-    );
+export function setupRandomAssets(cdnLocation:string):Asset[]{
+    const ASSETS_URL = cdnLocation+"random/";
+    
     // Assets de test, borrar cuando esté el backoffice
     const media = {
         "hexSelected":ASSETS_URL + "resources/hex-selected.png",
@@ -194,29 +226,7 @@ export function setupFakeAssets(cdnLocation:string):Asset[]{
         "imgUnknown":ASSETS_URL + "images/image-unknown.webp",
     }
 
-    assets.push(
-        //createAsset(ConstantAssets.HEX_SELECTED,'image',media['hexSelected']),
-        //createAsset(ConstantAssets.HEX_UNEXPLORED,'image',media['hexUnexplored']),
-        //createAsset(ConstantAssets.UI_OK,'image',media['ui_ok']),
-        //createAsset(ConstantAssets.UI_ADD,'image',media['ui_add']),
-        //createAsset(ConstantAssets.UI_DELETE,'image',media['ui_delete']),
-        //createAsset(ConstantAssets.UI_CANCEL,'image',media['ui_cancel']),
-        //createAsset(ConstantAssets.UI_WARNING,'image',media['ui_warning']),
-        //createAsset(ConstantAssets.ICON_DISMANTLE,'image',media['icondismantle']),
-        //createAsset(ConstantAssets.ICON_BUILD,'image',media['iconbuild']),
-        //createAsset(ConstantAssets.ICON_RESEARCH,'image',media['iconresearch']),
-        //createAsset(ConstantAssets.ICON_SPY,'image',media['iconspy']),
-        //createAsset(ConstantAssets.ICON_TRADE,'image',media['icontrade']),
-        //createAsset(ConstantAssets.ICON_ATTACK,'image',media['iconattack']),
-        //createAsset(ConstantAssets.ICON_CLAIM,'image',media['iconclaim']),
-        //createAsset(ConstantAssets.ICON_EXPLORE,'image',media['iconexplore']),
-        //createAsset(ConstantAssets.ICON_MESSAGE,'image',media['iconmessage']),
-        //createAsset(ConstantAssets.ICON_SECTION_AREA,'image',media['iconSectionArea']),
-        //createAsset(ConstantAssets.ICON_SECTION_RESOURCES,'image',media['iconSectionResources']),
-        //createAsset(ConstantAssets.ICON_SECTION_TECHNOLOGY,'image',media['iconSectionTechnology']),
-        //createAsset(ConstantAssets.ICON_SECTION_WORLD,'image',media['iconSectionWorld']),
-        //createAsset(ConstantAssets.ICON_SECTION_ACTIVITIES,'image',media['iconSectionActivity']),
-        //createAsset(ConstantAssets.ICON_SECTION_MESSAGES,'image',media['iconSectionMessage']),
+    const assets = [
         createAsset('cell-texture-water','image',media['cell-1']),
         createAsset('cell-texture-dirt1','image',media['cell-2']),
         createAsset('cell-texture-dirt2','image',media['cell-3']),
@@ -224,15 +234,7 @@ export function setupFakeAssets(cdnLocation:string):Asset[]{
         createAsset('cell-texture-forest2','image',media['cell-5']),        
         createAsset('icon-building','image',media['iconbuilding']),
         createAsset('icon-cell','image',media['iconcell']),
-        createAsset(ConstantAssets.ICON_PLAYERS,'image',media['iconplayers']),
-        createAsset(ConstantAssets.ICON_MSG_MESSAGE,'image',media['iconMsgMessage']),
-        createAsset(ConstantAssets.ICON_MSG_NOTIFICATION,'image',media['iconMsgNotification']),
-        createAsset(ConstantAssets.ICON_MSG_REPORT,'image',media['iconMsgReport']),
-
-        createAsset(ConstantAssets.MESSAGING_MESSAGE,'image',media['msgMessageImage']),
-        createAsset(ConstantAssets.MESSAGING_NOTIFICATION,'image',media['msgNotificationImage']),
-        createAsset(ConstantAssets.MESSAGING_REPORT,'image',media['msgReportImage']),
-
+       
         createAsset('placeable-texture-1','image',media['btex1']),
         createAsset('placeable-texture-2','image',media['btex2']),
         createAsset('placeable-texture-3','image',media['btex3']),
@@ -273,8 +275,98 @@ export function setupFakeAssets(cdnLocation:string):Asset[]{
         createAsset('gameportrait-4','image',media['gameportrait-4']),
         createAsset('gameportrait-5','image',media['gameportrait-5']),
         createAsset('gameportrait-6','image',media['gameportrait-6']),
-        //createAsset(ConstantAssets.UNKNOWN_IMAGE,'image',media['imgUnknown'])
-    );
+    ];
 
     return assets;
+}
+
+/**
+ * Mapa con las descripciones de los assets estáticos
+ */
+export const ConstantAssetDescriptions:Record<string,string>[] = [
+	{assetId:staticAssetKeys.UI_OK,text:"Icono aceptar"},
+	{assetId:staticAssetKeys.UI_WARNING,text:"Icono advertencia"},
+	{assetId:staticAssetKeys.UI_CANCEL,text:"Icono cancelar"},
+	{assetId:staticAssetKeys.UI_ADD,text:"Icono añadir"},
+	{assetId:staticAssetKeys.UI_DELETE,text:"Icono borrar"},
+	{assetId:staticAssetKeys.ICON_BUILD,text:"Icono construccion"},
+	{assetId:staticAssetKeys.ICON_DISMANTLE,text:"Icono  desmantelamiento"},
+	{assetId:staticAssetKeys.ICON_SPY,text:"Icono espionaje"},
+	{assetId:staticAssetKeys.ICON_TRADE,text:"Icono comercio"},
+	{assetId:staticAssetKeys.ICON_ATTACK,text:"Icono ataque"},
+	{assetId:staticAssetKeys.ICON_CLAIM,text:"Icono reclamar celda"},
+	{assetId:staticAssetKeys.ICON_EXPLORE,text:"Icono explorar"},
+	{assetId:staticAssetKeys.ICON_RESEARCH,text:"Icono investigar"},
+	{assetId:staticAssetKeys.ICON_MESSAGE,text:"Icono mensaje"},
+	{assetId:staticAssetKeys.HEX_SELECTED,text:"Textura celda seleccionada"},
+	{assetId:staticAssetKeys.HEX_UNEXPLORED,text:"Textura celda no explorada"},
+	{assetId:staticAssetKeys.ICON_SECTION_AREA,text:"Icono de la sección del jugador"},
+	{assetId:staticAssetKeys.ICON_SECTION_RESOURCES,text:"Icono de la sección de recursos"},
+	{assetId:staticAssetKeys.ICON_SECTION_TECHNOLOGY,text:"Icono de la sección de tecnología"},
+	{assetId:staticAssetKeys.ICON_SECTION_WORLD,text:"Icono del mapa del mundo"},
+	{assetId:staticAssetKeys.ICON_SECTION_ACTIVITIES,text:"Icono de la sección de actividades"},
+	{assetId:staticAssetKeys.ICON_SECTION_MESSAGES,text:"Icono de la sección de mensajería"},
+	{assetId:staticAssetKeys.ICON_PLAYERS,text:"Icono de jugadores"},
+	{assetId:staticAssetKeys.ICON_MSG_MESSAGE,text:"Icono de envíar mensaje"},
+	{assetId:staticAssetKeys.ICON_MSG_NOTIFICATION,text:"Icono de notificación de mensaje"},
+	{assetId:staticAssetKeys.ICON_MSG_REPORT,text:"Icono de informe"},
+	{assetId:staticAssetKeys.TECH_BACKGROUND,text:"Fondo de pantalla de la sección de tecnología"},
+	{assetId:staticAssetKeys.HOME_BACKGROUND,text:"Fondo de pantalla del área del jugador"},
+	{assetId:staticAssetKeys.RESOURCE_BACKGROUND,text:"Fondo de pantalla del área de recursos"},
+	{assetId:staticAssetKeys.MESSAGING_BACKGROUND,text:"Fondo de pantalla de la sección de mensajería"},
+	{assetId:staticAssetKeys.ACTIVITY_BACKGROUND,text:"Fondo de pantalla de la sección de actividades"},
+	{assetId:staticAssetKeys.MESSAGING_MESSAGE ,text:"Imagen de portada del panel de mensaje de jugador"},
+	{assetId:staticAssetKeys.MESSAGING_NOTIFICATION ,text:"Imagen de portada de notificación del sistema"},
+	{assetId:staticAssetKeys.MESSAGING_REPORT ,text:"Imagen de portada de informe de misión"},
+	{assetId:staticAssetKeys.UNKNOWN_IMAGE ,text:"Imagen no encontrada o ausente"}
+];
+
+
+
+export class AssetManager {
+    private static assets:{[name:string]:Asset} = {};
+    
+    public static add(asset:Asset){
+        AssetManager.assets[asset.id] = asset;
+    }
+
+    public static get(id:string){
+        return AssetManager.assets[id];
+    }
+}
+
+export function generateCSS(uiConfig:UIConfig):string {
+    const template = `\
+@font-face{\n
+font-family:game-font;\n
+    src:url('${process.env.CDN_URL}fonts/${uiConfig.uiControlFontFamily}');\n
+}\n
+:root{\n
+\n        
+    --ui-control-background-color:${uiConfig.uiControlBackgroundColor};\n
+    --ui-control-foreground-color:${uiConfig.uiControlForegroundColor};\n
+    --ui-control-background-color-brilliant: ${uiConfig.uiControlBackgroundColorBrilliant};\n
+    --ui-control-background-secondary:${uiConfig.uiControlBackgroundSecondary};\n
+    --ui-control-background-primary: ${uiConfig.uiControlBackgroundPrimary};\n
+    --ui-control-font-family:'game-font';\n
+    --ui-control-font-color:${uiConfig.uiControlFontColor};\n
+    --ui-control-font-color-disabled:${uiConfig.uiControlFontColorDisabled};\n
+    --ui-control-text-size:${uiConfig.uiControlTextSize};\n
+    --ui-control-heading-size:${uiConfig.uiControlTextHeadingSize};\n
+    --ui-control-shadow-color:${uiConfig.uiControlShadowColor};\n
+    --ui-control-padding:${uiConfig.uiControlPadding};\n
+    --ui-control-border-color: ${uiConfig.uiControlBorderColor};\n
+    --ui-control-border-radius: ${uiConfig.uiControlBorderRadius};\n
+    --ui-success:${uiConfig.uiSuccess};\n
+    --ui-warning:${uiConfig.uiWarning};\n
+    --ui-danger:${uiConfig.uiDanger};\n
+    --ui-resource-flow-negative:${uiConfig.uiWarning};\n
+    --ui-resource-flow-positive:${uiConfig.uiSuccess};\n
+}`;
+
+    return template;
+}
+
+export {
+    staticAssetKeys as ConstantAssets
 }

@@ -1,70 +1,39 @@
+export type WithToken<T> = T & {
+    token:string;
+
+}
 export interface FontDef{
     name:string;
     style:string;
     file:string;
 }
 
-export const ConstantAssets = {
-    /* Icons */
-    UI_OK:'icon-ok',
-    UI_WARNING:'icon-warning',
-    UI_CANCEL:'icon-cancel',
-    UI_ADD:'icon-add',
-    UI_DELETE:'ui-delete',
-    /* Activities */
-    ICON_BUILD:'icon-build',
-    ICON_DISMANTLE:'icon-dismantle',
-    ICON_SPY:'icon-spy',
-    ICON_TRADE:'icon-trade',
-    ICON_ATTACK:'icon-attack',
-    ICON_CLAIM:'icon-claim',
-    ICON_EXPLORE:'icon-explore',
-    ICON_RESEARCH:'icon-research',
-    ICON_MESSAGE:'icon-message',
-    /* Map / Cells */
-    HEX_SELECTED:'hex-selected',
-    HEX_UNEXPLORED:'hex-unexplored',
-    
-    /* Section icons */
-    ICON_SECTION_AREA:'icon-section-area',
-    ICON_SECTION_RESOURCES:'icon-section-resources',
-    ICON_SECTION_TECHNOLOGY:'icon-section-technology',
-    ICON_SECTION_WORLD:'icon-section-world',
-    ICON_SECTION_ACTIVITIES:'icon-section-activities',
-    ICON_SECTION_MESSAGES:'icon-section-messages',
-    
-    /* More icons */
-    ICON_PLAYERS:'icon-players',
-    ICON_MSG_MESSAGE:'icon-msg-message',
-    ICON_MSG_NOTIFICATION:'icon-msg-notification',
-    ICON_MSG_REPORT:'icon-msg-report',
-    
-    /* Section backgrounds */
-    TECH_BACKGROUND: 'tech-background',
-    HOME_BACKGROUND: 'home-background',
-    RESOURCE_BACKGROUND: 'resource-background',
-    MESSAGING_BACKGROUND: 'messaging-background',
-    ACTIVITY_BACKGROUND: 'activity-background',
-
-    /* Messaging section assets */
-    MESSAGING_MESSAGE : 'messaging-message-image',
-    MESSAGING_NOTIFICATION : 'messaging-notification-image',
-    MESSAGING_REPORT : 'messaging-report-image',
-
-    /* Elementos desconocidos */
-    UNKNOWN_IMAGE:'unknown_image'
+export interface Privilege{
+    id:string;
+    description:string;
 }
 
-export const Privileges = {
-    Play:'play',
-    UseBackoffice:'useBackoffice',
-    AddUser:'addUser',
-    EditUser:'editUser',
-    DeleteUser:'deleteUser',
-    BanPlayer:'banPlayer',
-    AddGame:'addGame',
-    EditGame:'editGame',
-    EditOwnedGame:'editOwnedGame'
+export const Privileges:Record<string,Privilege> = {
+    Play:{id:'play',description:'Participar en un juego'},
+    /* Permisos CRUD en backoffice, combinaciones de sección/acción */
+    UseBackoffice:{id:'bo-use',description:'Acceder al backoffice'},
+    AddUser:{id:'bo-users-add',description:'Crear usuarios'},
+    EditUser:{id:'bo-users-edit',description:'Editar usuarios'},
+    ViewUser:{id:'bo-users-view',description:'Ver usuarios'},
+    DeleteUser:{id:'bo-users-delete',description:'Borrar usuarios'},
+    ListUsers:{id:'bo-users-list',description:'Buscar usuarios'},
+    BanUser:{id:'bo-users-ban',description:'Banear usuarios'},
+    AddGame:{id:'bo-games-add',description:'Crear juegos'},
+    EditGame:{id:'bo-games-edit',description:'Editar juegos'},
+    DeleteGame:{id:'bo-games-edit',description:'Borrar juegos'},
+    ViewGame:{id:'bo-games-view',description:'Ver fichas de juegos'},
+    ListGames:{id:'bo-games-list',description:'Consultar juegos'},
+    AddInstance:{id:'bo-instances-add',description:'Crear instancias'},
+    EditInstance:{id:'bo-instances-edit',description:'Editar instancias'},
+    ListInstances:{id:'bo-instances-list',description:'Buscar instancias'},
+    ViewInstances:{id:'bo-instances-view',description:'Ver datos de instancias'},
+    DeleteInstances:{id:'bo-instances-list',description:'Borrar instancias'},
+    EditOwnedGames:{id:'bo-games-edit-own-game',description:'Editar juegos de los que es propietario'}
 }
 
 export const GameEvents = {
@@ -177,10 +146,6 @@ export interface PasswordRecoveryRequest{
 export interface LoginRequest{
     email:string;
     password:string;
-}
-
-export interface Properties{
-    [propName:string]:number;
 }
 
 /**
@@ -304,7 +269,7 @@ export interface UserInterface{
 export interface Asset{
     id:string;
     url:string;
-    type:'image'|'sound'|'text'|'json';
+    type:'image'|'sound'|'text'|'json'|'style';
     data?:any
 }
 export interface Media{
@@ -318,9 +283,8 @@ export interface Media{
 export type WithMedia<T> = T & {
     media:Media;
 }
-export interface Properties extends Record<string,any>{
-    
-}
+export type Properties = Record<string,any>;
+
 export enum ActivityType{
     Spy,            // cells / players
     Dismantle,      // placeables
@@ -379,6 +343,14 @@ export interface ResourceFlow extends ResourceAmount{
     last?:number;
 }
 
+export const PlaceableProperties = [
+    ConstantProperties.Indestructible,
+    ConstantProperties.InfluenceRadius,
+    ConstantProperties.Defence,
+    ConstantProperties.Health,
+    ConstantProperties.QueueCapacity,
+    ConstantProperties.SpyAvoid
+]
 // Unificamos structures+obstacles, no tiene sentido seguir teniendolos separados
 export interface Placeable{
     id:string;
@@ -397,6 +369,7 @@ export interface Technology{
     parent?:string;
     unlocks:string[];
     texture:Asset;
+    duration:number;
     properties:Properties;
 }
 export interface Cell{
@@ -404,11 +377,17 @@ export interface Cell{
     media:Media;
     texture:Asset;
     color:string;
+    probability:number;
     allowedPlaceableIds:string[];
     properties:Properties
 }
+export interface SectionConfig{
+    name:string;
+    icon:Asset;
+}
 export interface GameConfig{
     defaultPlayerProperties:Properties;
+    //sections:SectionConfig[];
     unknownCellId:string;
 }
 export interface GameRating{
@@ -484,21 +463,15 @@ export interface GameInstance{
     cells:CellInstance[];
     nextUUID:number; // Próximo identificador único
 }
-export interface Player{
-    id?:string
-    name:string;
-    surname:string;
-    email:string;
-    password:string;
-    birthDate:Date;
-}
+
 export interface User{
-    id?:string
+    id?:string;
     name:string;
     surname:string;
     email:string;
     password:string;
     privileges:string[];
+    bannedUntil?:Date;
 }
 
 export enum MessageType{
@@ -555,6 +528,7 @@ export interface WorldMapQuery{
 
 export interface WorldMapCell{
     position:Vector;
+    color:string;
     cellId?:string;
     playerId?:string;
 }

@@ -1,4 +1,4 @@
-import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, InstancePlayer, Message, MessageType, Player, SearchResult, TradingAgreement, WorldMapQuery, WorldMapSector } from '../models/monolyth';
+import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, InstancePlayer, Message, MessageType, SearchResult, TradingAgreement, WorldMapQuery, WorldMapSector } from '../models/monolyth';
 import { ActivityAvailability } from '../models/activities';
 import { addInstance, getInstance, getInstances, LiveGameInstance } from '../live/instances';
 import { getLoggedUser,bindPlayer, getLoggedPlayer } from '../live/sessions';

@@ -1,4 +1,4 @@
-import { InstancePlayer, Player, User } from "../models/monolyth";
+import { InstancePlayer, User } from "../models/monolyth";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
 
 interface MessageSender{
@@ -17,10 +17,6 @@ interface Session{
      */
     user:User;
     /**
-     * Jugador vinculado a la sesión
-     */
-    player?:Player;
-    /**
      * Vinculación con una instancia de juego. De aquí se deduce
      * que un jugador solo puede estar jugando a un juego a la vez.
      */
@@ -36,6 +32,7 @@ const sessions : Record<string,Session> = {};
  * Sesiones de jugadores, indexadas por id de jugador
  */
 const playerSessions : Record<string,Session> = {};
+
 function getSession(auth:string):Session{
     if(sessions[auth] != undefined){
         return sessions[auth];
