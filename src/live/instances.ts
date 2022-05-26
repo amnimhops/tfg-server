@@ -150,6 +150,21 @@ export class LiveGameInstance{
         this.startDate = Date.now();
         this.collectAssets();
 
+        /**
+         * Aplicar cualquier mejora introducida en el juego
+         * 
+         * 1.- Reflejar los recursos nuevos de los almacenes de losjugadores
+         * (los viejos que se los queden hasta gastarlos)
+         */
+        const resourceMap = this.gamedex.resources;
+        this.instance.players.forEach( player => {
+            const stockpileMap = toMap(player.stockpiles, sp => sp.resourceId);
+            for(const resId in resourceMap){
+                if(!stockpileMap[resId]){
+                    player.stockpiles.push({amount:0,resourceId:resId});
+                }
+            }
+        });
         this.resourceInterval = setInterval(this.processResourceFlows.bind(this),1000);
         this.queueInterval = setInterval(this.processQueue.bind(this),100);
         

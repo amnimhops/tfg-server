@@ -13,6 +13,11 @@ export interface Privilege{
     description:string;
 }
 
+export interface FileUpload{
+    type:string;
+    data:any;
+}
+
 export const Privileges:Record<string,Privilege> = {
     Play:{id:'play',description:'Participar en un juego'},
     /* Permisos CRUD en backoffice, combinaciones de sección/acción */
@@ -56,6 +61,11 @@ export const GameEvents = {
 
 export type WithAmount<T> = T & {
     amount:number;
+}
+
+export interface RegistrationRequest{
+    user:User;          // Este se mandará al servicio de usuarios
+    avatar:FileUpload|null;  // Este se mandará al servicio de subidas
 }
 
 export const ConstantProperties = {
@@ -471,6 +481,8 @@ export interface User{
     email:string;
     password:string;
     privileges:string[];
+    nickname?:string;
+    portrait?:Asset;
     bannedUntil?:Date;
 }
 

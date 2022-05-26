@@ -2,11 +2,8 @@ import * as path from 'path';
 import {writeFile} from 'fs';
 import * as imageDataURI from 'image-data-uri';
 import * as uuid from 'uuid';
+import { FileUpload } from '../models/monolyth';
 
-export interface FileUpload{
-    type:string;
-    data:any;
-}
 const UPLOAD_FOLDER = 'assets';
 export class UploadService{
     constructor(private resourceBaseUrl:string,private uploadFolder:string){

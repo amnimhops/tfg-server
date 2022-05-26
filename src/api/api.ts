@@ -1,15 +1,16 @@
 import { Router,Request,Response } from "express";
-import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, GameInstance, GameInstanceSummary, InstancePlayer, LoginRequest, Message, PasswordRecoveryRequest, SearchResult, TradingAgreement, User, Vector, WithToken, WorldMapQuery, WorldMapSector } from "../models/monolyth";
+import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, FileUpload, Game, GameInstance, GameInstanceSummary, InstancePlayer, LoginRequest, Message, PasswordRecoveryRequest, RegistrationRequest, SearchResult, TradingAgreement, User, Vector, WithToken, WorldMapQuery, WorldMapSector } from "../models/monolyth";
 
 import { Connection } from "../persistence/repository";
 import { IInstanceService, InstanceService, reduceInstance } from "../services/instanceService";
 import { ServiceError } from "../models/errors";
 import { IUserService, UserService } from "../services/userService";
 import { GameplayService } from "../services/gameplayService";
-import { FileUpload, UploadService } from "../services/uploadService";
+import { UploadService } from "../services/uploadService";
 import { GameService, reduceGame } from "../services/gameService";
 import { readdir } from "fs";
 import { bigBounce } from "./initialData";
+import { uuid } from "uuidv4";
 
 /**
  * En cumplimiento de los estándares REST las búsquedas
@@ -61,10 +62,40 @@ function setupRouter(
     router.get(['/users','/users/'],(request:Request<{},{},SearchResult<User>,B64Search>, response:Response<SearchResult<User>>) => {
         handleRequest(users.search(unwrapSearch(request.query.q)),response);
     });
+    
     router.get('/users/:id',(request:Request<{id:string}>, response:Response<User>) => {
         handleRequest(users.load(request.params.id),response);
     });
-    
+    /* Validación de formulario de usuario */
+    router.post('/users/check',(request:Request<{},any,User>, response:Response<Record<string,string>>) => {
+        handleRequest(users.validateUser(request.body),response);
+    });
+    /**
+     * Registro de usuario
+     * 1.- Crea
+     * 2.- Sube imagen
+     * 3.- Autentifica
+     */
+    router.post('/users/register',(request:Request<{},WithToken<User>,RegistrationRequest>, response:Response<WithToken<User>>) => {
+        const task = async (rq:RegistrationRequest) => {
+            const plainPassword = rq.user.password; // Hay un users.create() modifica el password plano, y authenticate() lo necesita
+            const user = await users.create(rq.user);
+            let imageUrl : string|null = null;
+
+            if(rq.avatar != null){
+                imageUrl = await uploads.save(rq.avatar);
+            }
+
+            await users.setImage(user.id,imageUrl);  
+
+            return await users.authenticate({
+                email:rq.user.email,
+                password:plainPassword
+            });
+        }
+        handleRequest( task(request.body) ,response);
+    });
+    /* Creación de usuario */
     router.post('/users',(request:Request<{},any,User>, response:Response<User>) => {
         handleRequest(users.create(request.body),response);
     });

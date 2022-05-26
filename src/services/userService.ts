@@ -5,6 +5,9 @@ import { BasicRESTService, IRestService } from "./restService";
 import { LoginRequest, PasswordRecoveryRequest, SearchParams, User, WithToken } from '../models/monolyth';
 import * as crypto from 'crypto';
 import { setSession } from "../live/sessions";
+import { uuid } from "uuidv4";
+
+const DEFAULT_USER_AVATAR = process.env.CDN_URL+'default/portrait-default.svg';
 
 function securePass(pass:string):string{
     return crypto.createHash('md5').update(pass).digest('hex')
@@ -22,6 +25,32 @@ export class UserService extends BasicRESTService<User> implements IUserService{
         this.passwordTokenRepo = connection.createRepository<PasswordRecoveryRequest>("passwordRecoveryRequests");
 
         console.info('Servicio de usuarios iniciado')
+    }
+
+    async validateUser(user:User):Promise<Record<string,string>>{
+        const errors : Record<string,string> = {};
+
+        if(!user.email) {
+            errors['email'] = 'Debe indicar el email';
+        }else{
+            const others = await this.find({email:user.email});
+            if(others.length > 0) { // En realidad, solo podría haber uno
+                errors['email'] = 'El correo ya está registrado';
+            }
+        }
+        if(!user.nickname){
+            errors['nickname'] = 'Indica un nombre de jugador';
+        }else{
+            const others = await this.find({nickname:user.nickname});
+            if(others.length > 0){
+                errors['nickname'] = 'Este nombre ya existe';
+            }
+        }
+        if(!user.name) errors['name'] = 'Indica tu nombre';
+        if(!user.surname) errors['surname'] = 'Indica tu apellido';
+
+        return errors;
+        
     }
 
     async authenticate(request:LoginRequest):Promise<WithToken<User>>{
@@ -70,5 +99,15 @@ export class UserService extends BasicRESTService<User> implements IUserService{
         console.log('Creado token de recuperación con id',id);
 
         return request;
+    }
+
+    async setImage(id:string,url:string|null):Promise<void>{
+        const user = await this.load(id);
+        if(url == null){
+            // Imagen por defecto, esto no es a nivel de juego sino de plataforma
+            url = DEFAULT_USER_AVATAR;
+        }
+        user.portrait = { id:'default-user-avatar',type:'image',url }; // No hace falta crear un ID unico, es mas, interesa que se repita para eliminar duplicados
+        await this.update(user);
     }
 }
