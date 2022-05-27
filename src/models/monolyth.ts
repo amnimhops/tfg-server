@@ -293,7 +293,7 @@ export interface Media{
 export type WithMedia<T> = T & {
     media:Media;
 }
-export type Properties = Record<string,any>;
+export type Properties = Record<string,number>;
 
 export enum ActivityType{
     Spy,            // cells / players
@@ -403,6 +403,16 @@ export interface GameConfig{
 export interface GameRating{
     score:number;
     votes:number;
+}
+export interface GameStats{
+    instances:number;
+    players:number;
+    maxPlayers:number;
+    connectedPlayers:number;
+    cells:number;
+    resources:number;
+    placeables:number;
+    technologies:number;
 }
 export interface Game{
     id?:string

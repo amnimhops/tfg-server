@@ -162,3 +162,20 @@ export function fmtResourceAmount(amount:number){
     }
     
 }
+
+/**
+ * Función que devuelve el número de páginas accesibles
+ * en un componente de paginación, basándose en el nº de resultados
+ * , la página actual y el máximo número de paginas que deben visualizarse
+ * @param page Página actual, para distribuir a su alrededor el resto
+ * @param min mínimo valor de página
+ * @param max máximo valor de página
+ * @param radio número máximo de paginas que se verán a izquierda y derecha de page
+ * @returns Un array con los índices de las páginas que deberán mostrarse.
+ */
+export function paginate(page:number,min:number,max:number,radio:number){
+        const first = Math.max(min,page - radio);
+        const last = Math.min(max,(page||min) + radio);
+        console.log(first,last)
+        return range([first,last+1]); // El rango no es inclusivo, las páginas, sí.
+}

@@ -81,11 +81,15 @@ function combineProperties(a:Properties,b:Properties):Properties{
     // Asignar todas las propiedades de 'a' al nuevo objeto
     Object.keys(a).forEach( key => props[key] = a[key]);
     // Asignar todas las propiedades de 'b' que no estén en 'a' y sumar las comunes
+    // Nota: Los + que se ven prefijando los valores son para convertir a número.
+    // Los tipos de typescript funcionan bien chequeando los tipos en tiempo de compilacion
+    // pero en ejecución es javascript puro, y si llega un '', al sumar hace coalescencia
+    // a string y empieza a concatenar cadenas en lugar de sumar valores...
     Object.keys(b).forEach( key => {
         if(props[key] !== undefined){
-            props[key] += b[key];
+            props[key] += (+b[key]);
         }else{
-            props[key] = b[key];
+            props[key] = (+b[key]);
         }
     });
 

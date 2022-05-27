@@ -1,5 +1,5 @@
 import { Router,Request,Response } from "express";
-import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, FileUpload, Game, GameInstance, GameInstanceSummary, InstancePlayer, LoginRequest, Message, PasswordRecoveryRequest, RegistrationRequest, SearchResult, TradingAgreement, User, Vector, WithToken, WorldMapQuery, WorldMapSector } from "../models/monolyth";
+import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, FileUpload, Game, GameInstance, GameInstanceSummary, GameStats, InstancePlayer, LoginRequest, Message, PasswordRecoveryRequest, RegistrationRequest, SearchResult, TradingAgreement, User, Vector, WithToken, WorldMapQuery, WorldMapSector } from "../models/monolyth";
 
 import { Connection } from "../persistence/repository";
 import { IInstanceService, InstanceService, reduceInstance } from "../services/instanceService";
@@ -8,9 +8,9 @@ import { IUserService, UserService } from "../services/userService";
 import { GameplayService } from "../services/gameplayService";
 import { UploadService } from "../services/uploadService";
 import { GameService, reduceGame } from "../services/gameService";
-import { readdir } from "fs";
+import { Base64 } from "js-base64";
 import { bigBounce } from "./initialData";
-import { uuid } from "uuidv4";
+
 
 /**
  * En cumplimiento de los estándares REST las búsquedas
@@ -35,9 +35,18 @@ function handleRequest<Output>( task:Promise<Output>, response:Response<Output|s
         response.status(error.code).send(error.message);
     });
 }
+/**
+ * TODO Hay un problema al convertir a base64 caracteres multibyte (la ñ, por ejemplo)
+ * y las busquedas no se efectuan correctamente.
+ * Info del problema en https://stackoverflow.com/questions/30106476/using-javascripts-atob-to-decode-base64-doesnt-properly-decode-utf-8-strings
+ * 
+ * Corregido con una librería de transcripción de base64
+ * https://www.npmjs.com/package/js-base64
+ */
 
 function unwrapSearch<T>(b64str:string):T{
-    const object = JSON.parse(Buffer.from(b64str,'base64').toString());
+    //const object = JSON.parse(Buffer.from(b64str,'base64').toString());
+    const object = JSON.parse(Base64.decode(b64str));
     console.log(object);
     return object;
 }
@@ -58,6 +67,10 @@ function setupRouter(
     router.get("/management/bigbounce",(request,response)=>{
         handleRequest(resetHandler(),response);
     });
+    /*
+     * Estado del servicio
+     */
+    router.get(['/ping'],(request,response) => response.status(200).send("PONG") );
 
     router.get(['/users','/users/'],(request:Request<{},{},SearchResult<User>,B64Search>, response:Response<SearchResult<User>>) => {
         handleRequest(users.search(unwrapSearch(request.query.q)),response);
@@ -124,6 +137,10 @@ function setupRouter(
     /* Esto devuelve el juego al completo, es una solicitud tocha */
     router.get('/games/:id',(request:Request<{id:string}>, response:Response<Game>) => {
         handleRequest(games.load(request.params.id),response);
+    });
+    /* Devuelve metainformación sobre el juego */
+    router.get('/games/:id/stats',(request:Request<{id:string}>, response:Response<GameStats>) => {
+        handleRequest(games.gameInfo(request.params.id),response);
     });
     /**
      * Reglas de estilo del juego. Si, aunque no lo parezca, es un endpoint de la API. Cuando una

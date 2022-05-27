@@ -2,15 +2,17 @@
 import { Collections, Connection, Repository } from "../persistence/repository";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { BasicRESTService, IRestService } from "./restService";
-import { Game, GameInstance, SearchParams, SearchResult, User } from '../models/monolyth';
+import { Game, GameInstance, GameStats, SearchParams, SearchResult, User } from '../models/monolyth';
 import { getInstances } from "../live/instances";
 import { generateCSS } from "../models/assets";
+import { countInstancePlayers } from "../live/sessions";
+import { randomInt } from "crypto";
 
 export interface IGameService extends IRestService<Game>{
     getGameList():Promise<Partial<Game>[]>;
 }
 
-const basicGameFields = {id:1,media:1,ownerId:1,rating:1};
+const basicGameFields = {id:1,media:1,ownerId:1,rating:1,gallery:1};
 
 /**
  * Devuelve una versión con los metadatos de juego, sin el grueso de la información
@@ -76,5 +78,41 @@ export class GameService extends BasicRESTService<Game> implements IGameService 
     async getGameStylesheet(id:string):Promise<string>{
         const game:Partial<Game> = await this.repository.load(id,{userInterface:true});
         return generateCSS(game.userInterface.style);
+    }
+
+    async gameInfo(id:string):Promise<GameStats>{
+        const game = await this.load(id);
+        const instances = getInstances().filter( instance => instance.gameId == game.id);
+        let cells = 0;
+        let connectedPlayers = 0;
+        let maxPlayers = 0;
+        let players = 0;
+        let placeables = game.placeables.length;
+        let resources = game.resources.length;
+        let technologies = game.technologies.length;
+
+        instances.forEach( instance => {
+            cells += instance.getGameInstance().cells.length;
+            connectedPlayers += countInstancePlayers(instance.id);
+            players += instance.getGameInstance().players.length;
+            maxPlayers += instance.getGameInstance().maxPlayers;
+        })
+
+        const stats : GameStats = {
+            cells,connectedPlayers,maxPlayers,placeables,players,resources,technologies,instances:instances.length
+        };
+        
+        //return stats;
+        return {
+            cells:randomInt(100000),
+            connectedPlayers:randomInt(100000),
+            maxPlayers:randomInt(100000),
+            placeables:randomInt(100000),
+            players:randomInt(100000),
+            resources:randomInt(100000),
+            technologies:randomInt(100000),
+            instances:randomInt(100000)
+
+        }
     }
 }
