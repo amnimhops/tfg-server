@@ -137,7 +137,7 @@ export class InstanceService extends BasicRESTService<GameInstance> implements I
                 id:result.id,
                 numPlayers:result.players.length,
                 liveData: livingInstanceStats[result.id] || undefined
-            }))
+            } as GameInstanceSummary))
         }
 
         return betterSearch;

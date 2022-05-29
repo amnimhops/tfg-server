@@ -55,6 +55,11 @@ export function setSession(auth:string,user:User){
     playerSessions[user.id] = sessions[auth];
 }
 
+export function clearSession(auth){
+    if(sessions[auth]){
+        delete sessions[auth];
+    }
+}
 export function getLoggedUser(auth:string):User{
     return getSession(auth).user;
 }

@@ -1,4 +1,4 @@
-import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, InstancePlayer, Message, MessageType, SearchResult, TradingAgreement, WorldMapQuery, WorldMapSector } from '../models/monolyth';
+import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, InstancePlayer, InstancePlayerInfo, Message, MessageType, SearchResult, TradingAgreement, WorldMapQuery, WorldMapSector } from '../models/monolyth';
 import { ActivityAvailability } from '../models/activities';
 import { addInstance, getInstance, getInstances, LiveGameInstance } from '../live/instances';
 import { getLoggedUser,bindPlayer, getLoggedPlayer } from '../live/sessions';
@@ -54,7 +54,39 @@ export class GameplayService implements IGameplayService{
     constructor(private connection:Connection){
 
     }
-
+    /**
+     * Devuelve información sumarizada de todas las instancias
+     * donde el jugador tiene intereses. En otras palabras, los
+     * juegos a los que se ha unido. Por ahora, solo devuelve
+     * los identificadores de los juegos vinculados a instancias
+     * donde el jugador se encuentra jugando.
+     * @param token 
+     * @param id
+     */
+    userInstanceInfo(token:string,id:string):Promise<InstancePlayerInfo[]>{
+        /**
+         * Aunque suene muy bien usar un Promise.resolve() al final en lugar
+         * de envolver con una promesa, recuerda que si no lo haces tienes
+         * que efectuar la gestión de errores por tu cuenta, de lo contrario
+         * no se escalan correctamente vía reject()
+         */
+        return new Promise( (resolve,reject) => {
+            const user = getLoggedUser(token);
+            // Solo un usuario puede consultar sus instancias
+            // TODO O un administrador, hay que comprobar los privilegios del usuario
+            if(id != user.id) throw <ServiceError>{code:ServiceErrorCode.Forbidden,message:'No tiene autorización para llevar a cabo esta solicitud'};
+    
+            const info : InstancePlayerInfo[] = [];
+            getInstances().forEach( instance => {
+                const player = instance.getPlayer(user.id!);
+                if(player){
+                    info.push({gameId:instance.gameId})
+                }
+            })
+                
+            return resolve(info);
+        })
+    }
     joinGame(token:string,gameId:string):Promise<Asset[]>{
         return new Promise( (resolve,reject) => {
             const user = getLoggedUser(token);

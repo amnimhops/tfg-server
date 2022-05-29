@@ -2,9 +2,9 @@
 import { Collections, Connection, Repository } from "../persistence/repository";
 import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { BasicRESTService, IRestService } from "./restService";
-import { LoginRequest, PasswordRecoveryRequest, SearchParams, User, WithToken } from '../models/monolyth';
+import { LoginRequest, PasswordRecoveryRequest, Privileges, SearchParams, User, WithToken } from '../models/monolyth';
 import * as crypto from 'crypto';
-import { setSession } from "../live/sessions";
+import { clearSession, setSession } from "../live/sessions";
 import { uuid } from "uuidv4";
 
 const DEFAULT_USER_AVATAR = process.env.CDN_URL+'default/portrait-default.svg';
@@ -72,6 +72,11 @@ export class UserService extends BasicRESTService<User> implements IUserService{
             throw <ServiceError>{code:ServiceErrorCode.Unauthorized,message:'Las credenciales no son válidas'};
         }
     }
+
+    async logout(auth:string):Promise<void>{
+        // TODO Estaría bien recoger estadísticas de uso y tal antes de eliminar la sesión
+        clearSession(auth);
+    }
    
     async checkEmailIsNotInUse(user:User):Promise<void>{
         const emailExists = await this.repository.find({email:user.email});
@@ -86,6 +91,18 @@ export class UserService extends BasicRESTService<User> implements IUserService{
         // No guardar el pass en plano
         entity.password = securePass(entity.password);
         return await super.create(entity);
+    }
+
+    /**
+     * Versión de create para jugadores, se encarga
+     * de ajustar los permisos con los que se crea un jugador
+     * @param entity 
+     * @returns 
+     */
+    async newPlayer(entity: User): Promise<User> {
+        entity.privileges = [Privileges.Play.id];
+        
+        return await this.create(entity);
     }
     
     async requestPasswordChange(email:string):Promise<PasswordRecoveryRequest>{

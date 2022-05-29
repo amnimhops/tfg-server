@@ -1,5 +1,5 @@
 import { Router,Request,Response } from "express";
-import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, FileUpload, Game, GameInstance, GameInstanceSummary, GameStats, InstancePlayer, LoginRequest, Message, PasswordRecoveryRequest, RegistrationRequest, SearchResult, TradingAgreement, User, Vector, WithToken, WorldMapQuery, WorldMapSector } from "../models/monolyth";
+import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, FileUpload, Game, GameInstance, GameInstanceSummary, GameStats, InstancePlayer, InstancePlayerInfo, LoginRequest, Message, PasswordRecoveryRequest, RegistrationRequest, SearchResult, TradingAgreement, User, Vector, WithToken, WorldMapQuery, WorldMapSector } from "../models/monolyth";
 
 import { Connection } from "../persistence/repository";
 import { IInstanceService, InstanceService, reduceInstance } from "../services/instanceService";
@@ -79,6 +79,9 @@ function setupRouter(
     router.get('/users/:id',(request:Request<{id:string}>, response:Response<User>) => {
         handleRequest(users.load(request.params.id),response);
     });
+    router.get('/users/:id/games',(request:Request<{id:string}>, response:Response<InstancePlayerInfo[]>) => {
+        handleRequest(gameplay.userInstanceInfo(request.headers.authorization,request.params.id),response);
+    });
     /* Validación de formulario de usuario */
     router.post('/users/check',(request:Request<{},any,User>, response:Response<Record<string,string>>) => {
         handleRequest(users.validateUser(request.body),response);
@@ -92,7 +95,7 @@ function setupRouter(
     router.post('/users/register',(request:Request<{},WithToken<User>,RegistrationRequest>, response:Response<WithToken<User>>) => {
         const task = async (rq:RegistrationRequest) => {
             const plainPassword = rq.user.password; // Hay un users.create() modifica el password plano, y authenticate() lo necesita
-            const user = await users.create(rq.user);
+            const user = await users.newPlayer(rq.user);
             let imageUrl : string|null = null;
 
             if(rq.avatar != null){
@@ -125,6 +128,9 @@ function setupRouter(
     
     router.post('/sessions/login',(request:Request<{},WithToken<User>,LoginRequest>,response:Response<WithToken<User>>) =>{
         handleRequest(users.authenticate(request.body),response);
+    });
+    router.delete('/sessions/:id',(request:Request<{},void>,response:Response<void>) =>{
+        handleRequest(users.logout(request.headers.authorization),response);
     });
     // Este endpoint aunque parecido al de búsqueda de juegos, solo devuelve un listado
     router.get('/gamelist',(request:Request<{},Partial<Game[]>,{}>,response:Response<Partial<Game[]>>) =>{
@@ -229,7 +235,7 @@ function setupRouter(
     router.get('/instance/cells',(request:Request<{},CellInstance[]>,response:Response<CellInstance[]>) =>{
         handleRequest(gameplay.getCells(request.headers.authorization),response);
     });
-
+    
     router.get('/instance/messages',(request:Request<{},SearchResult<Message>,{text:string,type:number,page:number} >,response:Response<SearchResult<Message>>) =>{
         const [text,type,page] = [request.query.text as string,parseInt(request.query.type as string),parseInt(request.query.page as string)];
         handleRequest(gameplay.getMessages(request.headers.authorization,text,type,page),response);

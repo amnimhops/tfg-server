@@ -1,3 +1,7 @@
+export type Link = {
+    name:string;
+    href:string;
+}
 export type WithToken<T> = T & {
     token:string;
 
@@ -376,11 +380,13 @@ export interface Placeable{
 export interface Technology{
     id:string;
     media:Media;
+    effort:number;
     parent?:string;
     unlocks:string[];
     texture:Asset;
     duration:number;
     properties:Properties;
+    expenses:ResourceAmount[];
 }
 export interface Cell{
     id:string;
@@ -434,6 +440,16 @@ export interface Stockpile{
     capacity?:number;
 }
 
+export interface InstancePlayerInfo{
+    gameId:string;
+
+    /**
+     * TODO Aqui se puedne meter muchos mas datos
+     * - Recursos acumulados (nombre/imagen/cantidad)
+     * - Tec. investigadas,
+     * - etc.
+     */
+}
 export interface InstancePlayer{
     instanceId:string; // Enlace bidireccional con la instancia
     media:Media;
@@ -464,13 +480,18 @@ export interface LivegameInstanceSummary{
     uptime:number;
     connectedPlayers:number;
 }
-export interface GameInstanceSummary{
+/**
+ * Esta interfaz está pensada para las búsquedas de instancias,
+ * devuelve un tipo compatible con GameInstance, pero sin tener
+ * que arrastrar todas sus cositas.
+ */
+export interface GameInstanceSummary extends Partial<GameInstance>{
     id:string;
     size:number;
     gameId:string;
     gameName:string;
     numPlayers:number;
-    liveData:LivegameInstanceSummary;
+    liveData?:LivegameInstanceSummary;
 }
 export interface GameInstance{
     id?:string

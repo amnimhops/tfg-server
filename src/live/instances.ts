@@ -1,6 +1,6 @@
 import { EventEmitter } from "../models/events";
 import { countdown, countdownStr, fmtResourceAmount, randomInt, randomItem, toMap } from "../models/functions";
-import { Activity,GameEvents, ActivityType, Cell, Game, GameInstance, Placeable, Resource, Technology, PlaceableInstance, ResourceFlow, Stockpile, Properties, flowPeriodRanges, ConstantProperties, InstancePlayer, EnqueuedActivity, CellInstance, MessageContentType, MessageType, ResourceAmount, SpyReport, Message, Vector, SearchResult, TradingAgreement, Asset, Media, User, ActivityTarget, WorldMapQuery, WorldMapSector, WorldPlayer, GameInstanceSummary, LivegameInstanceSummary} from "../models/monolyth";
+import { Activity,GameEvents, ActivityType, Cell, Game, GameInstance, Placeable, Resource, Technology, PlaceableInstance, ResourceFlow, Stockpile, Properties, flowPeriodRanges, ConstantProperties, InstancePlayer, EnqueuedActivity, CellInstance, MessageContentType, MessageType, ResourceAmount, SpyReport, Message, Vector, SearchResult, TradingAgreement, Asset, Media, User, ActivityTarget, WorldMapQuery, WorldMapSector, WorldPlayer, LivegameInstanceSummary} from "../models/monolyth";
 import { ActivityAvailability, ActivityCost, AttackActivityTarget, BuildingActivityTarget, ClaimActivityTarget, DismantlingActivityTarget, ExplorationActivityTarget, ResearchActivityTarget, SpyActivityTarget } from '../models/activities'
 import { CombatPlayer, CombatResult, CombatUnit, CombatUnitInfo, createCombatSummary } from '../models/combat'
 import { ServiceError, ServiceErrorCode } from "../models/errors";
@@ -295,6 +295,16 @@ export class LiveGameInstance{
         // TODO El coste de la actividad puede (DEBE) depender del target
         // TIP: Añadir activityEffort a target?
         const activity = this.gamedex.activities.get(type);
+/*
+        if(type == ActivityType.Research){
+            // TODO Pasar mañana esto a activities.ts, generar
+            // una creacion pura y que tanto el cliente como el servidor
+            // se alimenten de sus calculos.
+            const tech = target as ResearchActivityTarget
+        
+       }*/
+
+        
         return {
             resources:activity.expenses,
             time:activity.duration,
