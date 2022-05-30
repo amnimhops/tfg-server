@@ -1,5 +1,5 @@
 import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, Game, InstancePlayer, InstancePlayerInfo, Message, MessageType, SearchResult, TradingAgreement, WorldMapQuery, WorldMapSector } from '../models/monolyth';
-import { ActivityAvailability } from '../models/activities';
+import { ActivityAvailability, ActivityCost } from '../models/activities';
 import { addInstance, getInstance, getInstances, LiveGameInstance } from '../live/instances';
 import { getLoggedUser,bindPlayer, getLoggedPlayer } from '../live/sessions';
 
@@ -184,5 +184,9 @@ export class GameplayService implements IGameplayService{
     
     deleteMessage(token:string, id:number):Promise<void>{
         return withPlayer<void>( token, (player,instance) => instance.deleteMessage(player,id) );
+    }
+
+    getActivityCost(token:string, type:ActivityType, target:ActivityTarget):Promise<ActivityCost>{
+        return withPlayer<ActivityCost>( token, (player,instance) => instance.getActivityCost(player,type,target));
     }
 }

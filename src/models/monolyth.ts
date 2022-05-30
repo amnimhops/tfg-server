@@ -60,6 +60,8 @@ export const GameEvents = {
     IncomingMessage:'incoming_message',
     PlaceableFinished:'placeable_finished',
     ResearchCompleted:'research_completed',
+    PlayerPropertiesUpdated:'player_properties_updated',
+    InfluenceRadiusUpdated:'influence_radius_updated',
     Timer:'timer'
 }
 
@@ -85,7 +87,10 @@ export const ConstantProperties = {
     Indestructible:'indestructible',
     TransportCapacity:'transportCapacity',
     InfluenceRadius:'influenceRadius',
-    Weight:'weight'
+    Weight:'weight',
+    EnhancedResearch:'enhancedResearch',
+    EnhancedBuild:'enhancedBuild',
+    EnhancedAttack:'enhancedAttack'
 };
 
 export type PropDesc = {
@@ -108,6 +113,9 @@ export const PropertyDescriptions:PropDesc[] = [
     {prop:ConstantProperties.TransportCapacity,text:"Capacidad de carga de la unidad, determina cuanto botín se puede cargar en una ofensiva exitosa",type:'number'},
     {prop:ConstantProperties.InfluenceRadius,text:"Radio de influencia del jugador (acumulativo), determina el número de celdas a su alrededor con las que puede interactuar",type:'number'},
     {prop:ConstantProperties.Weight,text:"Masa de la unidad, determina el peso en la carga. En caso de un ataque exitoso determina el peso máximo que puede transportar. En combinación con la capacidad de carga determina la recompensa.",type:'number'},
+    {prop:ConstantProperties.EnhancedResearch,text:"Factor multiplicador a los costes de investigación. Cuanto más alto más coste, cuanto mas bajo, menor coste y duración (en tanto por uno)",type:'number'},
+    {prop:ConstantProperties.EnhancedBuild,text:"Factor multiplicador a los costes de construcción. Cuanto más alto más coste, cuanto mas bajo, menor coste y duración (en tanto por uno)",type:'number'},
+    {prop:ConstantProperties.EnhancedAttack,text:"Factor multiplicador a los costes de ataque. Cuanto más alto más coste, cuanto mas bajo, menor coste y duración (en tanto por uno)",type:'number'},
 ]
 
 export const CellProperties = [
@@ -275,9 +283,18 @@ export interface UIConfig{
     uiResourceFlowPositive:string;
     uiResourceFlowNegative:string;
 }
-
+export interface TileConfig{
+    width:number;
+    height:number;
+    xOffset:number;
+    yOffset:number
+}
 export interface UserInterface{
-    style:UIConfig; // Cambiar cuando termines el BO
+    /** Configuración CSS de la interfaz */
+    style:UIConfig;
+    /** Propiedades gráficas de los mapas enlosables */
+    tiles:TileConfig; 
+    /** Recursos gráficos de la interfaz */
     uiAssets:Record<string,Asset>;
 }
 export interface Asset{
@@ -367,20 +384,29 @@ export const PlaceableProperties = [
 ]
 // Unificamos structures+obstacles, no tiene sentido seguir teniendolos separados
 export interface Placeable{
+    /**Identificador de la estructura */
     id:string;
+    /** Tipo (estructura u obstaculo) */
     type:'structure'|'obstacle';
+    /** Info multimedia */
     media:Media;
+    /** Propiedades asociadas a la estructura */
     properties:Properties;
+    /** Flujos de producción y mantenimiento de recursos */
     flows:ResourceFlow[]; // Estos flujos sirven para inicializar los flujos de las instancias de cada emplazable
+    /** Textura usada para pintar en el mapa del jugador */
     texture:Asset;
+    /** Tecnología necesaria para construir */
     requiredTech?:string;
-    effort?:number;
+    /** Costes de construcción */
+    buildExpenses?:ResourceAmount[];
+    /** Tiempo de construccion */
+    duration:number;
 }
 
 export interface Technology{
     id:string;
     media:Media;
-    effort:number;
     parent?:string;
     unlocks:string[];
     texture:Asset;
@@ -403,7 +429,6 @@ export interface SectionConfig{
 }
 export interface GameConfig{
     defaultPlayerProperties:Properties;
-    //sections:SectionConfig[];
     unknownCellId:string;
 }
 export interface GameRating{
@@ -433,6 +458,7 @@ export interface Game{
     activities:Activity[];
     rating?:GameRating;
     config:GameConfig;
+    defaultPlayerStockpiles:ResourceAmount[];
 }
 export interface Stockpile{
     resourceId:string;

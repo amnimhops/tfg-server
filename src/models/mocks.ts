@@ -157,7 +157,8 @@ export function mockUniverse(){
             texture: randomAsset('placeable-texture'),
             type: randomItem(['obstacle', 'structure']),
             properties: randomProperties(),
-            flows: range(randomInt(5)).map(i => randomFlow())
+            flows: range(randomInt(5)).map(i => randomFlow()),
+            duration:10
         })
     );
     const cells: Cell[] = range(NUM_CELLS).map(
@@ -221,6 +222,7 @@ export function mockUniverse(){
             name: randomName(),
             thumbnail: randomAsset('')
         },
+        defaultPlayerStockpiles:[],
         ownerId: 'nobody', // El bang es para que webpack deje de tocar las narices al compilar
         placeables: placeables,
         resources: resources,

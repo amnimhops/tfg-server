@@ -3,6 +3,11 @@ import { ConstantAssets, getDefaultStaticAssets } from "./assets";
 import { toMap } from "./functions";
 import { Asset, UserInterface } from "./monolyth";
 
+const CELL_WIDTH = 200;
+const CELL_HEIGHT = 91;
+const H_DISPLACEMENT = 150;
+const V_DISPLACEMENT = 46;
+
 export function defaultUserInterface(cdnUrl:string):UserInterface{
 
     const defaultAssets = toMap(getDefaultStaticAssets(cdnUrl),asset => asset.id)
@@ -29,6 +34,12 @@ export function defaultUserInterface(cdnUrl:string):UserInterface{
             "uiWarning":"",
             "uiSuccess":"",
             "uiControlPadding":""
+        },
+        tiles:{
+            width:CELL_WIDTH,
+            height:CELL_HEIGHT,
+            xOffset:H_DISPLACEMENT,
+            yOffset:V_DISPLACEMENT
         },
         uiAssets:defaultAssets
     }

@@ -10,6 +10,7 @@ import { UploadService } from "../services/uploadService";
 import { GameService, reduceGame } from "../services/gameService";
 import { Base64 } from "js-base64";
 import { bigBounce } from "./initialData";
+import { ActivityCost } from "../models/activities";
 
 
 /**
@@ -44,10 +45,9 @@ function handleRequest<Output>( task:Promise<Output>, response:Response<Output|s
  * https://www.npmjs.com/package/js-base64
  */
 
-function unwrapSearch<T>(b64str:string):T{
+function unwrapB64Json<T>(b64str:string):T{
     //const object = JSON.parse(Buffer.from(b64str,'base64').toString());
     const object = JSON.parse(Base64.decode(b64str));
-    console.log(object);
     return object;
 }
 // NOTA, recuerda avisar del asunto del CORS (npm install cors)
@@ -73,7 +73,7 @@ function setupRouter(
     router.get(['/ping'],(request,response) => response.status(200).send("PONG") );
 
     router.get(['/users','/users/'],(request:Request<{},{},SearchResult<User>,B64Search>, response:Response<SearchResult<User>>) => {
-        handleRequest(users.search(unwrapSearch(request.query.q)),response);
+        handleRequest(users.search(unwrapB64Json(request.query.q)),response);
     });
     
     router.get('/users/:id',(request:Request<{id:string}>, response:Response<User>) => {
@@ -138,7 +138,7 @@ function setupRouter(
     });
     // Búsqueda de juegos, pero de info. parcial ojo!
     router.get(['/games','/games/'],(request:Request<{},{},SearchResult<Partial<Game>>,B64Search>,response:Response<SearchResult<Partial<Game>>>) =>{
-        handleRequest(games.searchPartial(unwrapSearch(request.query.q)),response);
+        handleRequest(games.searchPartial(unwrapB64Json(request.query.q)),response);
     });
     /* Esto devuelve el juego al completo, es una solicitud tocha */
     router.get('/games/:id',(request:Request<{id:string}>, response:Response<Game>) => {
@@ -176,7 +176,7 @@ function setupRouter(
     // La información de la instancia no está diseñada para ser transmitida. En su lugar,
     // para esta solicitud se devolverá un GameInstanceSummary con datos relevantes sobre el elemento.
     router.get(['/instances','/instances/'],(request:Request<{},{},SearchResult<GameInstanceSummary>,B64Search>,response:Response<SearchResult<GameInstanceSummary>>) =>{
-        handleRequest(instances.searchSummaries(unwrapSearch(request.query.q)),response);
+        handleRequest(instances.searchSummaries(unwrapB64Json(request.query.q)),response);
     });
 
     /* Esto devuelve el juego al completo, es una solicitud tocha */
@@ -278,6 +278,22 @@ function setupRouter(
 
     router.get('/instance/trades/:id',(request:Request<{id:number}>, response:Response<TradingAgreement>) => {
         handleRequest(gameplay.getTradingAgreement(request.headers.authorization,request.params.id),response)
+    });
+
+    /**
+     * Otro endpoint especialito: para calcular el coste de una actividad necesitamos pasarle el objetivo(target),
+     * que es un json de tamaño y forma variable. Empleamos la metodología usada en las búsquedas y pasamos
+     * los valores por get + json en base64
+     */
+    router.get("/activities/:type/:cost",(request:Request<{type:ActivityType,cost:string},ActivityCost>,response:Response<ActivityCost>)=>{
+        handleRequest(
+            gameplay.getActivityCost(
+                request.headers.authorization,
+                request.params.type,
+                unwrapB64Json(request.params.cost)
+            ),
+            response
+        )
     });
 
     console.info('Definición de rutas completada');
