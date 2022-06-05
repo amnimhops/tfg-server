@@ -10,8 +10,6 @@ import { getInstance, getInstances } from './live/instances';
  */
 
 config();
-console.log(process.env);
-
 
 (async () => {
     const connection = new Connection();
@@ -23,20 +21,9 @@ console.log(process.env);
     // arrancadas es bastante lento, se desactiva
     await gameAPI.instanceService.startInstances();
 
-    /**
-     * Registramos el listener de finalización para guardar el
-     * estado de toda la aplicación
-     */
-    process.on('SIGINT',() => {
-        console.log('Terminando la aplicación, guardando instancias.');
-
-        Promise
-            .all([...getInstances().map( instance => gameAPI.instanceService.update(instance.getGameInstance()) )])
-            .then( ()=>{
-                console.log('Todas las instancias guardadas');
-                process.exit(1);
-            });
-    })
+    setInterval(()=>{
+        gameAPI.instanceService.saveAll();
+    },60000)
 
 })().then(() => {
     console.info('Servidor listo');

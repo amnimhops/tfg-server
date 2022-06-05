@@ -19,7 +19,7 @@ export function defaultUserInterface(cdnUrl:string):UserInterface{
             "uiControlBackgroundColorBrilliant":"#005eff",
             "uiControlForegroundColor":"#194898",
             "uiControlFontColor":"white",
-            "uiControlFontColorDanger":"#dd0a0a",
+            /*"uiControlFontColorDanger":"#dd0a0a",*/
             "uiControlFontColorDisabled":"#a0a0a0",
             "uiControlTextSize":"1.0em",
             "uiControlTextHeadingSize":"1.5em",

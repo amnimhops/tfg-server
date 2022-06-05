@@ -267,7 +267,7 @@ export interface UIConfig{
     uiControlBackgroundColorBrilliant:string;
     uiControlForegroundColor:string;
     uiControlFontColor:string;
-    uiControlFontColorDanger:string;
+    /*uiControlFontColorDanger:string;*/
     uiControlFontColorDisabled:string;
     uiControlTextSize:string;
     uiControlTextHeadingSize:string;

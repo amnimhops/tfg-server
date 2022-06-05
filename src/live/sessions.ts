@@ -57,7 +57,10 @@ export function setSession(auth:string,user:User){
 
 export function clearSession(auth){
     if(sessions[auth]){
+
         delete sessions[auth];
+    }else{
+        throw <ServiceError>{code:ServiceErrorCode.NotFound,message:'No se ha encontrado la sesión asociada al token'};
     }
 }
 export function getLoggedUser(auth:string):User{

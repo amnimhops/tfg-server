@@ -47,7 +47,6 @@ export interface IGameplayService{
     acceptTradeAgreement(token:string,id:number):Promise<void>
     getTradingAgreement(token:string,id:number):Promise<TradingAgreement>
     deleteMessage(token:string, id:number):Promise<void>
-
 }
 
 export class GameplayService implements IGameplayService{
@@ -167,7 +166,7 @@ export class GameplayService implements IGameplayService{
     }
     
     sendTradeAgreement(token:string, agreement:TradingAgreement):Promise<string>{
-        return withPlayer<string>( token, (player,instance) => instance.sendTradeAgreement(agreement).toString() );
+        return withPlayer<string>( token, (player,instance) => instance.sendTradeAgreement(player,agreement).toString() );
     };
     
     cancelTradeAgreement(token:string, id:number):Promise<void>{
@@ -177,7 +176,7 @@ export class GameplayService implements IGameplayService{
     acceptTradeAgreement(token:string,id:number):Promise<void>{
         return withPlayer<void>( token, (player,instance) => instance.acceptTradeAgreement(player,id) );
     }
-    
+
     getTradingAgreement(token:string,id:number):Promise<TradingAgreement>{
         return withPlayer<TradingAgreement>( token, (player,instance) => instance.getTradingAgreement(player,id) );
     }

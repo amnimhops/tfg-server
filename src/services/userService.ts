@@ -75,6 +75,9 @@ export class UserService extends BasicRESTService<User> implements IUserService{
 
     async logout(auth:string):Promise<void>{
         // TODO Estaría bien recoger estadísticas de uso y tal antes de eliminar la sesión
+        // TODO Habría que introducir mecanismos de seguridad adicionales.
+        // Ahora mismo la autoridad la da el propio token, pero nada garantiza
+        // que quien lo envía sea el portador original.
         clearSession(auth);
     }
    

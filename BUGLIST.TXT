@@ -1,0 +1,4 @@
+* Al pasar de un juego en edicion a un nuevo usuario EXPLOTA
+* iDEM DE usuarios a juegos
+* hay que portar a InstancePLayer el portrait del user
+* - Se ha cambiado en instances, pero   NO SEH APRBOADO

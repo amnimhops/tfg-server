@@ -181,9 +181,10 @@ export function mockUniverse(){
         const password = randomName() // Esto no es un password valido
         const name = randomName('MyNameIs-')
         const surname = randomName('SonOf-')
+        const id = 'randomplayer-'+i;
 
         return {
-            email,name,password,privileges,surname
+            email,name,password,privileges,surname,id
         }as User;
     });
 
@@ -195,7 +196,7 @@ export function mockUniverse(){
         stockpiles: resources.map(res => ({ resourceId: res.id, amount: 100 })),
         queue: [],
         technologies: range(3).map(i => randomItem(technologies).id),
-        cells: range(randomInt(100)).map(i => randomInt(MAP_SIZE * MAP_SIZE)),
+        cells: [],//range(randomInt(100)).map(i => randomInt(MAP_SIZE * MAP_SIZE)),
         properties: randomProperties(10,1),
         instanceId: '',
         exploredCells: []

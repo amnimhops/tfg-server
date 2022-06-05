@@ -7,6 +7,7 @@ import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { countInstancePlayers, getMessageSender } from "./sessions";
 import { } from "../models/assets";
 import { GameData } from "../models/gamedata";
+import { combineAmounts } from "../models/resources";
 
 const MESSAGES_PER_PAGE = 25;
 const DEFAULT_RADIUS = 2;
@@ -15,13 +16,13 @@ function filterQueue(queue: EnqueuedActivity[], type: ActivityType): EnqueuedAct
     return queue.filter(item => item.type == type);
 }
 // TODO Esto hay que mejorarlo, devuelve un medio vacío solo con el nombre del jugador, ¿donde se ponen los perfiles?
-function createPlayerMedia(playerName: string): Media {
+function createPlayerMedia(user: User): Media {
     return {
         description: 'Biografía del jugador',
         icon: { id: 'empty', type: 'image', url: '' },
         thumbnail: { id: 'empty', type: 'image', url: '' },
-        image: { id: 'empty', type: 'image', url: '' },
-        name: playerName
+        image: { id: user.id+'-portrait', type: 'image', url: user.portrait?.url },
+        name: user.name
     }
 }
 /**
@@ -108,6 +109,18 @@ function checkFlow(flow: ResourceFlow): number {
     }
 
     return amount;
+}
+
+/**
+ * Estima si los almacenes tendrán suficiente material para satisfacer
+ * una demanda de recursos
+ * @param stockpiles Almacenes de un jugador
+ * @param amounts cantidad que se quiere comprobar que puede satisfacer, 
+ * debe estar normalizada (no más de una entrada por recurso)
+ * @returns boolean
+ */
+ function hasEnoughSupplies(stockpiles: Record<string, Stockpile>, amounts:ResourceAmount[]) {
+    return amounts.every( item => item.amount <= stockpiles[item.resourceId].amount);
 }
 
 /**
@@ -454,7 +467,11 @@ export class LiveGameInstance {
 
             return item;
         } else {
-            throw availability;
+            //throw availability;
+            throw <ServiceError>{
+                code:ServiceErrorCode.Conflict,
+                message:"No se ha podido iniciar la actividad: "+availability.info.join(";")
+            }
         }
     }
 
@@ -464,8 +481,8 @@ export class LiveGameInstance {
         const newIndex = currentIndex + offset;
         // Validaciones varias
         if (!activity) throw <ServiceError>{ code: ServiceErrorCode.NotFound, message: 'No se ha encontrado la actividad solicitada' };
-        if (newIndex <= 0) throw <ServiceError>{ code: ServiceErrorCode.ServerError, message: 'La posición de la actividad no es válida' };
-        if (player.queue[newIndex].startedAt || activity?.startedAt) throw <ServiceError>{ code: ServiceErrorCode.ServerError, message: 'No se puede alterar una actividad en marcha' };
+        if (newIndex <= 0) throw <ServiceError>{ code: ServiceErrorCode.Conflict, message: 'La posición de la actividad no es válida' };
+        if (player.queue[newIndex].startedAt || activity?.startedAt) throw <ServiceError>{ code: ServiceErrorCode.Conflict, message: 'No se puede alterar una actividad en marcha' };
 
         const aux = player.queue[newIndex]!;
         player.queue[newIndex] = activity!;
@@ -767,6 +784,9 @@ export class LiveGameInstance {
         const playerMap: Record<string, WorldPlayer> = {};
         const w = query.p2.x - query.p1.x;
         const h = query.p2.y - query.p1.y;
+
+        if(w <= 0 || h <= 0) throw <ServiceError>{code:ServiceErrorCode.BadRequest,message:'Coordenadas no validas'};
+
         const sector: WorldMapSector = {
             map: [],
             height: h,
@@ -1149,10 +1169,20 @@ export class LiveGameInstance {
         return stats;
     }
 
-    sendTradeAgreement(agreement: TradingAgreement): number {
-        const sender = this.instance.players.find(player => player.playerId == agreement.srcPlayerId)!;
-        const receiver = this.instance.players.find(player => player.playerId == agreement.dstPlayerId)!;
+    sendTradeAgreement(player:InstancePlayer, agreement: TradingAgreement): number {
+        const sender = this.instance.players.find(p => p.playerId == agreement.srcPlayerId);
+        const receiver = this.instance.players.find(p => p.playerId == agreement.dstPlayerId);
+
+        // Verifiar que el emisor existe, que es el jugador y que el destinatario existe
+        if(!sender) throw <ServiceError>{code:ServiceErrorCode.Conflict,message:'El emisor del tratado debe ser el propio jugador'};
+        if(!receiver) throw <ServiceError>{code:ServiceErrorCode.Conflict,message:'El receptor no se ha encontrado'}; // Esto no es un servicio rest, no lanzamos un 404
+
         // Los recursos del tratado se bloquean hasta su aceptación o cancelación
+        const stockpileMap = toMap(player.stockpiles, sp =>sp.resourceId);
+        if(!hasEnoughSupplies(stockpileMap,agreement.offer)){
+            throw <ServiceError>{code:ServiceErrorCode.Conflict,message:'No tiene suficientes recursos para cumplir con la oferta'};
+        }
+
         this.removeResources(sender, agreement.offer);
 
         // 1.- Añadir a la lista de tratos comerciales pendientes de aceptar en la instancia
@@ -1242,8 +1272,16 @@ export class LiveGameInstance {
         const dstPlayer = this.instance.players.find(player => player.playerId == agreement?.dstPlayerId);
 
         if (!agreement) { // existe el acuerdo?
-            throw new Error('No se ha encontrado el tratado comercial');
+            throw <ServiceError>{
+                code:ServiceErrorCode.NotFound,
+                message:'No se ha encontrado el tratado comercial'
+            };
         } else if (player.playerId == dstPlayer?.playerId) { // El que acepta debe ser necesariamente dstPlayer
+            // El jugador debe tener recursos suficientes para satisfacerla demanda
+            const stockpileMap = toMap(player.stockpiles, sp => sp.resourceId);
+            if(!hasEnoughSupplies(stockpileMap,agreement.request)){
+                throw <ServiceError>{code:ServiceErrorCode.Conflict,message:'No tienes suficientes recursos para satisfacer la solicitud'};
+            }
             // Se quitan al jugador que acepta los recursos requeridos
             this.removeResources(dstPlayer, agreement.request);
             // Se dan al jugador que acepta los recursos ofertados
@@ -1268,6 +1306,8 @@ export class LiveGameInstance {
                 message: 'El acuerdo comercial con ' + dstPlayer.media.name + ' se ha completado con éxito',
                 subject: 'Acuerdo comercial completado', sendAt: Date.now()
             });
+        }else{
+            throw <ServiceError>{code:ServiceErrorCode.Forbidden,message:'El jugador no está involucrado en el acuerdo'};
         }
     }
 
@@ -1327,6 +1367,10 @@ export class LiveGameInstance {
     }
 
     sendMessage(player: InstancePlayer, dstPlayerId: string, subject: string, message: string): number {
+        if(!this.getPlayer(dstPlayerId)){
+            throw <ServiceError>{code:ServiceErrorCode.Conflict,message:'El destinatario no es válido'};
+        }
+
         const msg: Message = {
             id: this.nextUUID(),
             type: MessageType.Message,
@@ -1348,11 +1392,17 @@ export class LiveGameInstance {
         for (let i = 0; i < this.instance.playerMessages.length; i++) {
             const msg = this.instance.playerMessages[i];
             // Solo un jugador puede borrar los mensajes que le han sido enviados
-            if (msg.id == id && msg.dstPlayerId == player.playerId) {
-                this.instance.playerMessages.splice(i, 1);
-                break;
+            if (msg.id == id){
+                if(msg.dstPlayerId == player.playerId) {
+                    this.instance.playerMessages.splice(i, 1);
+                    return;
+                }else{
+                    throw <ServiceError>{code:ServiceErrorCode.Forbidden,message:"El mensaje no pertenece al jugador"}
+                }
             }
         }
+        // Llegados a este punto no se ha encontrado ningún mensaje...error!
+        throw <ServiceError>{code:ServiceErrorCode.NotFound,message:"No se ha encontrado el mensaje"};
     }
 
     /**
@@ -1399,7 +1449,7 @@ export class LiveGameInstance {
             const instancePlayer: InstancePlayer = {
                 cells: [],
                 instanceId: this.instance.id,
-                media: createPlayerMedia(player.name),
+                media: createPlayerMedia(player),
                 queue: [],
                 stockpiles: this.createInitialStockpile(),
                 technologies: [],

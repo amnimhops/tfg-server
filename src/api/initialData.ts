@@ -54,3 +54,20 @@ export async function bigBounce(connection:Connection):Promise<string>{
 
     return 'Y la luz, se hizo';
 }
+
+export async function createSuperuser(connection:Connection):Promise<string>{
+    /**
+     * Creamos el usuario administrador
+     */
+     const userRepo = connection.createRepository<User>(Collections.Users);
+
+     const admin : User = {
+        email:'root@super.user',
+        name:'root',
+        surname:'rooter',
+        password : crypto.createHash('md5').update('root').digest('hex'),
+        privileges:Object.keys(Privileges).map ( key => Privileges[key].id ) // Todos los privilegios        
+    }
+    
+    return await userRepo.save(admin);
+}

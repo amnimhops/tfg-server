@@ -1,16 +1,17 @@
 import { Router,Request,Response } from "express";
-import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, FileUpload, Game, GameInstance, GameInstanceSummary, GameStats, InstancePlayer, InstancePlayerInfo, LoginRequest, Message, PasswordRecoveryRequest, RegistrationRequest, SearchResult, TradingAgreement, User, Vector, WithToken, WorldMapQuery, WorldMapSector } from "../models/monolyth";
+import { ActivityTarget, ActivityType, Asset, CellInstance, EnqueuedActivity, FileUpload, Game, GameInstance, GameInstanceSummary, GameStats, InstancePlayer, InstancePlayerInfo, LoginRequest, Message, PasswordRecoveryRequest, Privilege, Privileges, RegistrationRequest, SearchResult, TradingAgreement, User, Vector, WithToken, WorldMapQuery, WorldMapSector } from "../models/monolyth";
 
 import { Connection } from "../persistence/repository";
 import { IInstanceService, InstanceService, reduceInstance } from "../services/instanceService";
-import { ServiceError } from "../models/errors";
+import { ServiceError, ServiceErrorCode } from "../models/errors";
 import { IUserService, UserService } from "../services/userService";
 import { GameplayService } from "../services/gameplayService";
 import { UploadService } from "../services/uploadService";
 import { GameService, reduceGame } from "../services/gameService";
 import { Base64 } from "js-base64";
-import { bigBounce } from "./initialData";
+import { bigBounce, createSuperuser } from "./initialData";
 import { ActivityCost } from "../models/activities";
+import { getLoggedUser } from "../live/sessions";
 
 
 /**
@@ -50,6 +51,61 @@ function unwrapB64Json<T>(b64str:string):T{
     const object = JSON.parse(Base64.decode(b64str));
     return object;
 }
+
+
+/**
+ * Esta función termina la solicitud enviando el código de error
+ * adecuado si determina que el usuario autenticado no dispone
+ * de los permisos adecuados para continuar
+ * @param auth token de autenticación
+ * @param privileges un array de cadenas de texto cuyo
+ * contenido se cotejará contra los privilegios del usuario
+ * asociado al token.
+ * @param matchAll determina si para conceder autorización
+ * el usuario basta con que tenga uno de los permisos indicados
+ * o todos ellos. Por defecto basta con tener uno.
+ */
+ function requestAuthorization(token:string,response:Response,privileges:Privilege[],matchAll:boolean=false){
+    let status = false;
+    if(!token){
+        response.status(ServiceErrorCode.Unauthorized).send("No se ha suministrado el token");
+    }else{
+        
+        try{
+            const user = getLoggedUser(token)!;
+            const sessionPrivileges = user.privileges || [];
+            
+            let count = 0;
+        
+            for(const privilege of privileges){
+                if(sessionPrivileges.includes(privilege.id)){
+                    count++;
+                }
+            }
+        
+            if(matchAll && count != privileges.length){
+                response.status(ServiceErrorCode.Forbidden).send("No tiene permisos para ejecutar esta operación en este recurso");
+            }else if( count == 0){
+                response.status(ServiceErrorCode.Forbidden).send("No tiene permisos para ejecutar esta operación en este recurso");
+            }else{
+                status = true;
+            }
+        }catch(err){
+            response.status(ServiceErrorCode.Forbidden).send("El token no es válido, cierra la sesión y vuelve a entrar.");
+        }
+        
+    }
+
+    if(status == false){
+        /**
+         * Parche del que no me siento muy orgulloso: lanzamos
+         * una excepción para que express deje de procesar la
+         * solicitud y no haya que editar a mano cada endpoint
+         * controlando el retorno de este metodo.
+         */
+        throw new Error('Not authorized');
+    }
+}
 // NOTA, recuerda avisar del asunto del CORS (npm install cors)
 function setupRouter(
     users:UserService,
@@ -64,7 +120,7 @@ function setupRouter(
     /*
      * Reseteo del servidor
      */
-    router.get("/management/bigbounce",(request,response)=>{
+    router.get("/management/install",(request,response)=>{
         handleRequest(resetHandler(),response);
     });
     /*
@@ -73,13 +129,16 @@ function setupRouter(
     router.get(['/ping'],(request,response) => response.status(200).send("PONG") );
 
     router.get(['/users','/users/'],(request:Request<{},{},SearchResult<User>,B64Search>, response:Response<SearchResult<User>>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.ListUsers]);
         handleRequest(users.search(unwrapB64Json(request.query.q)),response);
     });
     
     router.get('/users/:id',(request:Request<{id:string}>, response:Response<User>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.ViewUser]);
         handleRequest(users.load(request.params.id),response);
     });
     router.get('/users/:id/games',(request:Request<{id:string}>, response:Response<InstancePlayerInfo[]>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.Play]);
         handleRequest(gameplay.userInstanceInfo(request.headers.authorization,request.params.id),response);
     });
     /* Validación de formulario de usuario */
@@ -113,13 +172,16 @@ function setupRouter(
     });
     /* Creación de usuario */
     router.post('/users',(request:Request<{},any,User>, response:Response<User>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.AddUser]);
         handleRequest(users.create(request.body),response);
     });
     router.put('/users/:id',(request:Request<{id:string},any,User>, response:Response<User>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.EditUser]);
         // Los modelos empleados ya incorporan el ID
         handleRequest(users.update(request.body),response);
     });
     router.delete('/users/:id',(request:Request<{id:string}>, response:Response<void>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.DeleteUser]);
         handleRequest(users.delete(request.params.id),response)
     });
     router.post(['/users/recoveryTokens'],(request:Request<{},PasswordRecoveryRequest,{email:string}>, response:Response<PasswordRecoveryRequest|string>) => {
@@ -129,7 +191,7 @@ function setupRouter(
     router.post('/sessions/login',(request:Request<{},WithToken<User>,LoginRequest>,response:Response<WithToken<User>>) =>{
         handleRequest(users.authenticate(request.body),response);
     });
-    router.delete('/sessions/:id',(request:Request<{},void>,response:Response<void>) =>{
+    router.delete('/sessions/',(request:Request<{},void>,response:Response<void>) =>{
         handleRequest(users.logout(request.headers.authorization),response);
     });
     // Este endpoint aunque parecido al de búsqueda de juegos, solo devuelve un listado
@@ -142,6 +204,7 @@ function setupRouter(
     });
     /* Esto devuelve el juego al completo, es una solicitud tocha */
     router.get('/games/:id',(request:Request<{id:string}>, response:Response<Game>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.ViewGame]);
         handleRequest(games.load(request.params.id),response);
     });
     /* Devuelve metainformación sobre el juego */
@@ -165,41 +228,48 @@ function setupRouter(
 
     /* Creación de nuevo juego */
     router.post('/games',(request:Request<{},Partial<Game>,Game>,response:Response<Partial<Game>>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.AddGame]);
         // Hacemos un pequeño apaño para no devolver de nuevo TODO el juego como 
         // respuesta al post
         handleRequest(games.create(request.body).then( (game) => reduceGame(game)),response);
     });
     router.put('/games/:id',(request:Request<{id:string},Partial<Game>,Game>, response:Response<Partial<Game>>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.EditGame]);
         // Los modelos empleados ya incorporan el ID
         handleRequest(games.update(request.body).then( reduceGame ),response);
     });
     // La información de la instancia no está diseñada para ser transmitida. En su lugar,
     // para esta solicitud se devolverá un GameInstanceSummary con datos relevantes sobre el elemento.
     router.get(['/instances','/instances/'],(request:Request<{},{},SearchResult<GameInstanceSummary>,B64Search>,response:Response<SearchResult<GameInstanceSummary>>) =>{
+        requestAuthorization(request.headers.authorization,response,[Privileges.ListInstances]);
         handleRequest(instances.searchSummaries(unwrapB64Json(request.query.q)),response);
     });
 
-    /* Esto devuelve el juego al completo, es una solicitud tocha */
     router.get('/instances/:id',(request:Request<{id:string}>, response:Response<Partial<GameInstance>>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.ViewInstances]);
         handleRequest(instances.load(request.params.id).then( reduceInstance ),response);
     });
     
     router.post('/instances',(request:Request<{},Partial<GameInstance>,GameInstance>,response:Response<Partial<GameInstance>>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.AddInstance]);
         handleRequest(instances.create(request.body).then( (instance) => reduceInstance(instance)),response);
     });
     /**
      * en una instancia  solo se pueden hacer cambios parciales (maximo de jugadores)
      */
     router.patch('/instances/:id',(request:Request<{id:string},Partial<GameInstance>,GameInstance>,response:Response<Partial<GameInstance>>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.EditInstance]);
         handleRequest(instances.updateNumPlayers(request.params.id,request.body),response);
     });
     /**
      * Actualización del estado de ejecución de una instancia
      */
     router.put('/instances/:id/status',(request:Request<{id:string},string>,response:Response<string>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.EditInstance]);
         handleRequest(instances.changeStatus(request.params.id,request.body),response);
     });
     router.delete('/instances/:id',(request:Request<{id:string}>, response:Response<void>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.DeleteInstances]);
         handleRequest(instances.delete(request.params.id),response)
     });
     /*
@@ -207,6 +277,7 @@ function setupRouter(
      */
 
     router.delete('/games/:id',(request:Request<{id:string}>, response:Response<void>) => {
+        requestAuthorization(request.headers.authorization,response,[Privileges.DeleteGame]);
         handleRequest(games.delete(request.params.id),response)
     });
     
@@ -216,10 +287,12 @@ function setupRouter(
 
 
     router.post('/games/:id/join',(request:Request<{id:string},Asset[]>,response:Response<Asset[]>) =>{
+        requestAuthorization(request.headers.authorization,response,[Privileges.Play]);
         handleRequest(gameplay.joinGame(request.headers.authorization,request.params.id),response);
     });
 
     router.get('/instance/gamedata',(request:Request<{id:string},Game>,response:Response<Game>) =>{
+        requestAuthorization(request.headers.authorization,response,[Privileges.Play]);
         handleRequest(gameplay.getGameData(request.headers.authorization),response);
     });
     // Métodos de juego de la api
@@ -243,7 +316,7 @@ function setupRouter(
     router.post('/instance/messages',(request:Request<{},string,{dstPlayerId:string,subject:string,message:string}>,response:Response<string>) =>{
         handleRequest(gameplay.sendMessage(request.headers.authorization,request.body.dstPlayerId,request.body.subject,request.body.message),response);
     });
-    router.delete('/instance/messages/:id',(request:Request<{id:number}>, response:Response<string>) => {
+    router.delete('/instance/messages/:id',(request:Request<{id:number}>, response:Response<void>) => {
         handleRequest(gameplay.deleteMessage(request.headers.authorization,request.params.id),response)
     });
     router.post('/instance/queue',(request:Request<{},EnqueuedActivity,{type:ActivityType,target:ActivityTarget}>,response:Response<EnqueuedActivity>) =>{
@@ -278,22 +351,6 @@ function setupRouter(
 
     router.get('/instance/trades/:id',(request:Request<{id:number}>, response:Response<TradingAgreement>) => {
         handleRequest(gameplay.getTradingAgreement(request.headers.authorization,request.params.id),response)
-    });
-
-    /**
-     * Otro endpoint especialito: para calcular el coste de una actividad necesitamos pasarle el objetivo(target),
-     * que es un json de tamaño y forma variable. Empleamos la metodología usada en las búsquedas y pasamos
-     * los valores por get + json en base64
-     */
-    router.get("/activities/:type/:cost",(request:Request<{type:ActivityType,cost:string},ActivityCost>,response:Response<ActivityCost>)=>{
-        handleRequest(
-            gameplay.getActivityCost(
-                request.headers.authorization,
-                request.params.type,
-                unwrapB64Json(request.params.cost)
-            ),
-            response
-        )
     });
 
     console.info('Definición de rutas completada');

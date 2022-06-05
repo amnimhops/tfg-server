@@ -68,6 +68,7 @@ function createInstanceCells(instance:GameInstance, game:Game):CellInstance[]{
 
 export interface IInstanceService extends IRestService<GameInstance>{
     startInstances():Promise<void>
+    saveAll():Promise<void>;
 }
 
 const basicInstanceFields = {id:1,size:1,players:1,gameId:1,maxPlayers:1};
@@ -92,6 +93,8 @@ export class InstanceService extends BasicRESTService<GameInstance> implements I
         // Esto no se hace en el cliente por eficiencia: puede haber
         // cientos de miles de celdas
         const game = await this.gameStore.load(entity.gameId);
+        if(!game) throw <ServiceError>{code:ServiceErrorCode.Conflict,message:"No se encuentra el juego indicado para crear la vinculación"};
+
         entity.cells = createInstanceCells(entity,game);
         return super.create(entity);
         //const instance = await 
@@ -210,6 +213,15 @@ export class InstanceService extends BasicRESTService<GameInstance> implements I
         if(inMemory) throw <ServiceError>{code:ServiceErrorCode.Conflict,message:"No se puede borrar una instancia que está en ejecución"};
         
         return await super.delete(id);
+    }
+
+    async saveAll():Promise<void>{
+        for (const instance of getInstances()){
+            const id = await this.repository.save(instance.getGameInstance());
+            console.log("Instancia",id,"guardada");
+        }
+
+        Promise.resolve();
     }
 
 }

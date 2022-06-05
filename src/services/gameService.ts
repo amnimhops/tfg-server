@@ -102,8 +102,8 @@ export class GameService extends BasicRESTService<Game> implements IGameService 
             cells,connectedPlayers,maxPlayers,placeables,players,resources,technologies,instances:instances.length
         };
         
-        //return stats;
-        return {
+        return stats;
+        /*return {
             cells:randomInt(100000),
             connectedPlayers:randomInt(100000),
             maxPlayers:randomInt(100000),
@@ -112,7 +112,6 @@ export class GameService extends BasicRESTService<Game> implements IGameService 
             resources:randomInt(100000),
             technologies:randomInt(100000),
             instances:randomInt(100000)
-
-        }
+        }*/
     }
 }
