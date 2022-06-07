@@ -375,7 +375,7 @@ export function createAPI(connection:Connection):GameAPI{
         gameplayService,
         gameService,
         uploadService,
-        ()=>bigBounce(connection)
+        ()=>createSuperuser(connection)
     );
     
     const api : GameAPI = {

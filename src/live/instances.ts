@@ -1344,7 +1344,7 @@ export class LiveGameInstance {
     }
 
     private sendEvent(player: InstancePlayer, type: string, data: any): void {
-        const send = getMessageSender(player.playerId);
+        const send = getMessageSender(player);
         if (send) {
             send({ type, data });
             console.log(type, ' event sent to LIVE player', player.playerId);

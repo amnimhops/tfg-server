@@ -77,9 +77,19 @@ export function getLoggedPlayer(auth:string):InstancePlayer{
     }
 }
 
-export function getMessageSender(playerId:string):MessageSender|null{
-    const session = playerSessions[playerId];
-    return session?.sendMessage || null
+export function getMessageSender(player:InstancePlayer):MessageSender|null{
+    const session = playerSessions[player.playerId];
+    /**
+     * Es importante tener en cuenta que se nos puede requerir enviar
+     * un mensaje a un jugador que, aunque tiene sesión iniciada, la
+     * tiene en UN JUEGO DIFERENTE. Para esto es imprescindible comprobar
+     * el instanceId
+     */
+    if(session && session.instancePlayer && session.instancePlayer.instanceId == player.instanceId){
+        return session?.sendMessage || null
+    }else{
+        return null;
+    }
 }
 /**
  * Vincula una instancia de un jugador en una instancia
