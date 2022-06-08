@@ -21,9 +21,14 @@ config();
     // arrancadas es bastante lento, se desactiva
     await gameAPI.instanceService.startInstances();
 
-    setInterval(()=>{
-        gameAPI.instanceService.saveAll();
-    },60000)
+    if(process.env.SAVE_INSTANCES && process.env.SAVE_INSTANCES === 'true'){
+        setInterval(()=>{
+            gameAPI.instanceService.saveAll();
+        },60000)
+    }else{
+        console.info("Atención, no se guardarán las instancias periodicamente");
+    }
+    
 
 })().then(() => {
     console.info('Servidor listo');
